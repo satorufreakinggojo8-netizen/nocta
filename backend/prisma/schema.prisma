@@ -1,0 +1,198 @@
+// Prisma schema — source of truth for docs/02-DATABASE-SCHEMA.md
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile       SleepProfile?
+  goals         SleepGoal[]
+  sessions      SleepSession[]
+  logs          SleepLog[]
+  routines      SleepRoutine[]
+  dailyInsights DailyInsight[]
+  weeklyInsights WeeklyInsight[]
+  conversations AiConversation[]
+  notifications Notification[]
+  settings      UserSettings?
+}
+
+enum GoalType {
+  SLEEP_LONGER
+  FALL_ASLEEP_FASTER
+  WAKE_EASIER
+  IMPROVE_CONSISTENCY
+  IMPROVE_RECOVERY
+  BETTER_ROUTINE
+  REDUCE_SCREEN_TIME
+}
+
+model SleepGoal {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalType  GoalType
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model SleepProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  typicalBedtime    String   // "HH:mm"
+  typicalWakeTime   String   // "HH:mm"
+  targetDurationMin Int      @default(480)
+  caffeineNotes     String?
+  exerciseNotes     String?
+  screenUseNotes    String?
+  eveningRoutine    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum DataSource {
+  SELF_REPORTED
+  ESTIMATED
+  HEALTH_CONNECT
+  WEARABLE
+}
+
+model SleepSession {
+  id                 String     @id @default(uuid())
+  userId             String
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date               DateTime
+  bedtime            DateTime
+  sleepAttemptTime   DateTime
+  estimatedSleepTime DateTime
+  wakeTime           DateTime
+  nightAwakenings    Int        @default(0)
+  sleepQuality       Int // 1-5
+  morningEnergy      Int // 1-5
+  source             DataSource @default(SELF_REPORTED)
+  notes              String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@index([userId, date])
+}
+
+model SleepLog {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date           DateTime
+  caffeineTime   String?
+  exerciseTime   String?
+  screenUseNotes String?
+  alcohol        Boolean  @default(false)
+  lastMealTime   String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+model SleepRoutine {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  stepsJson    String // ordered list of RoutineStep, stored as JSON
+  isActive     Boolean  @default(true)
+  reminderTime String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model DailyInsight {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
+model WeeklyInsight {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart   DateTime
+  avgDuration Int
+  avgBedtime  String
+  avgWakeTime String
+  consistency Int
+  quality     Int
+  score       Int
+  observation String
+  createdAt   DateTime @default(now())
+
+  @@index([userId, weekStart])
+}
+
+model AiConversation {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  startedAt DateTime    @default(now())
+  messages  AiMessage[]
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model AiMessage {
+  id                 String         @id @default(uuid())
+  conversationId     String
+  conversation       AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role               MessageRole
+  content            String
+  groundedInDataRange String? // e.g. "2026-08-01..2026-08-31", for auditability
+  createdAt          DateTime       @default(now())
+
+  @@index([conversationId])
+}
+
+model Notification {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String
+  title        String
+  body         String
+  scheduledFor DateTime
+  sentAt       DateTime?
+  read         Boolean   @default(false)
+
+  @@index([userId])
+}
+
+model UserSettings {
+  id                    String  @id @default(uuid())
+  userId                String  @unique
+  user                  User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationsEnabled  Boolean @default(true)
+  aiDataSharingScope    String  @default("full") // "full" | "summary_only" | "none"
+  theme                 String  @default("dark")
+  units                 String  @default("metric")
+}

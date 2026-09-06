@@ -8,7 +8,7 @@
     <application
         android:name=".NoctaApplication"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@android:drawable/sym_def_app_icon"
         android:label="@string/app_name"
         android:theme="@style/Theme.Nocta"
         android:supportsRtl="true">

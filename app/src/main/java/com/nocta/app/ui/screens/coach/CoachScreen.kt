@@ -71,7 +71,6 @@ private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .weight(1f)
             .padding(NoctaSpacing.md),
         verticalArrangement = Arrangement.Center
     ) {

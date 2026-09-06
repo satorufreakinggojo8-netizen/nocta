@@ -115,7 +115,7 @@ private fun CoachInputBar(
             value = text,
             onValueChange = onTextChanged,
             modifier = Modifier
-                .weight(1f)
+                .fillmaxwidth()
                 .clip(NoctaShapes.large),
             placeholder = { Text("Ask Vela about your sleep") },
             enabled = enabled,

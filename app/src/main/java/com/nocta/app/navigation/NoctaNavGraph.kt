@@ -18,12 +18,9 @@ import androidx.navigation.compose.rememberNavController
 import com.nocta.app.ui.components.NoctaBottomNavigation
 import com.nocta.app.ui.screens.coach.CoachScreen
 import com.nocta.app.ui.screens.home.HomeScreen
+import com.nocta.app.ui.screens.sleep.SleepScreen   // NEW
 import com.nocta.app.ui.theme.NoctaTextSecondary
 
-/**
- * Screens marked 🧩 in docs/03-SCREENS.md render ComingSoonScreen — a real,
- * navigable placeholder rather than omitted/fabricated content.
- */
 @Composable
 fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -53,7 +50,9 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
             composable(NoctaDestination.Home.route) {
                 HomeScreen(
                     onOpenSleepDetails = { sessionId ->
-                        navController.navigate(NoctaRoutes.SLEEP_DETAILS.replace("{sessionId}", sessionId))
+                        navController.navigate(
+                            NoctaRoutes.SLEEP_DETAILS.replace("{sessionId}", sessionId)
+                        )
                     },
                     onOpenCoach = { navController.navigate(NoctaDestination.Coach.route) },
                     onOpenWindDown = { navController.navigate(NoctaRoutes.WIND_DOWN) },
@@ -62,7 +61,7 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
                 )
             }
             composable(NoctaDestination.Sleep.route) {
-                ComingSoonScreen("Sleep")
+                SleepScreen()   // was: ComingSoonScreen("Sleep")
             }
             composable(NoctaDestination.Coach.route) {
                 CoachScreen()

@@ -2,12 +2,15 @@ package com.nocta.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.nocta.app.data.local.MIGRATION_1_2
 import com.nocta.app.data.local.NoctaDatabase
 import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.data.repository.AiCoachRepositoryImpl
 import com.nocta.app.data.repository.SleepRepositoryImpl
+import com.nocta.app.data.repository.SleepTrackingRepositoryImpl
 import com.nocta.app.domain.repository.AiCoachRepository
 import com.nocta.app.domain.repository.SleepRepository
+import com.nocta.app.domain.repository.SleepTrackingRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
 import dagger.Binds
 import dagger.Module
@@ -22,8 +25,6 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-// Base URL is environment-specific — set via BuildConfig, not hardcoded, so
-// debug/staging/prod can point at different backends. See build.gradle.kts.
 private const val BASE_URL_PLACEHOLDER = "https://api.nocta.example.com/"
 
 @Module
@@ -34,11 +35,11 @@ object NetworkModule {
     @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC // NEVER set BODY in release builds — avoid logging user sleep data
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         return OkHttpClient.Builder()
             .addInterceptor(logging)
-            .readTimeout(60, TimeUnit.SECONDS) // generous timeout for streamed AI responses
+            .readTimeout(60, TimeUnit.SECONDS)
             .build()
     }
 
@@ -63,13 +64,19 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): NoctaDatabase =
-        Room.databaseBuilder(context, NoctaDatabase::class.java, "nocta.db").build()
+        Room.databaseBuilder(context, NoctaDatabase::class.java, "nocta.db")
+            .addMigrations(MIGRATION_1_2)   // NEW — required for v1 → v2
+            .build()
 
     @Provides
     fun provideSleepDao(db: NoctaDatabase) = db.sleepDao()
 
     @Provides
     fun provideAiMessageDao(db: NoctaDatabase) = db.aiMessageDao()
+
+    // NEW
+    @Provides
+    fun provideSleepTrackingDao(db: NoctaDatabase) = db.sleepTrackingDao()
 }
 
 @Module
@@ -89,4 +96,10 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindSleepRepository(impl: SleepRepositoryImpl): SleepRepository
+
+    // NEW
+    @Binds
+    abstract fun bindSleepTrackingRepository(
+        impl: SleepTrackingRepositoryImpl
+    ): SleepTrackingRepository
 }

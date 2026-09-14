@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import javax.inject.Inject
@@ -61,6 +62,7 @@ class SleepViewModel @Inject constructor(
                 trackingRepository.observeLatestCompleted(),
                 now
             ) { active, completed, tick ->
+
                 val checkIn = completed?.let {
                     morningCheckInRepository.getForSession(it.id)
                 }
@@ -72,7 +74,7 @@ class SleepViewModel @Inject constructor(
                     latestCheckIn = checkIn,
                     isStale = active != null &&
                         SleepTrackingRules.isStale(active.startedAt, tick),
-                    sleepScore = null,
+                    sleepScore = _uiState.value.sleepScore,
                     showMorningCheckIn = completed != null && checkIn == null,
                     message = _uiState.value.message
                 )
@@ -115,12 +117,11 @@ class SleepViewModel @Inject constructor(
     fun submitMorningCheckIn(checkIn: MorningCheckIn) {
         viewModelScope.launch {
             try {
-                val trackingSession =
-    trackingRepository.observeLatestCompleted()
-        .let { flow ->
-            kotlinx.coroutines.flow.first(flow)
-        }
-        ?: throw IllegalStateException("No completed sleep session found.")
+                val trackingSession: SleepTrackingSession =
+                    trackingRepository.observeLatestCompleted().first()
+                        ?: throw IllegalStateException(
+                            "No completed sleep session found."
+                        )
 
                 morningCheckInRepository.save(
                     trackingSession.id,
@@ -128,8 +129,11 @@ class SleepViewModel @Inject constructor(
                 )
 
                 val start = trackingSession.startedAt
+
                 val end = trackingSession.endedAt
-                    ?: throw IllegalStateException("Sleep session has no wake time.")
+                    ?: throw IllegalStateException(
+                        "Sleep session has no wake time."
+                    )
 
                 val sleepSession = createSleepSession(
                     trackingSessionId = trackingSession.id,

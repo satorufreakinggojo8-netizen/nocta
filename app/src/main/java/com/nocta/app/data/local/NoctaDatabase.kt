@@ -7,13 +7,19 @@ import androidx.room.RoomDatabase
     entities = [
         SleepSessionEntity::class,
         AiMessageEntity::class,
-        SleepTrackingSessionEntity::class   // NEW — v2
+        SleepTrackingSessionEntity::class,
+        MorningCheckInEntity::class
     ],
-    version = 2,
-    exportSchema = true // schemas exported to app/schemas for migration diffing
+    version = 3,
+    exportSchema = true
 )
 abstract class NoctaDatabase : RoomDatabase() {
+
     abstract fun sleepDao(): SleepDao
+
     abstract fun aiMessageDao(): AiMessageDao
-    abstract fun sleepTrackingDao(): SleepTrackingDao   // NEW
+
+    abstract fun sleepTrackingDao(): SleepTrackingDao
+
+    abstract fun morningCheckInDao(): MorningCheckInDao
 }

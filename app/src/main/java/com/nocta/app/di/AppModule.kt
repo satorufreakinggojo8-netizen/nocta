@@ -1,4 +1,4 @@
-ackage com.nocta.app.di
+package com.nocta.app.di
 
 import android.content.Context
 import androidx.room.Room

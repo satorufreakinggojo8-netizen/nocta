@@ -6,6 +6,7 @@ import com.nocta.app.domain.model.MorningCheckIn
 import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepTrackingError
 import com.nocta.app.domain.model.SleepTrackingSession
+import com.nocta.app.domain.model.SleepSession
 import com.nocta.app.domain.repository.MorningCheckInRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.repository.SleepTrackingRepository
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
+
 import javax.inject.Inject
 
 data class SleepUiState(
@@ -30,6 +32,7 @@ data class SleepUiState(
     val latestCheckIn: MorningCheckIn? = null,
     val isStale: Boolean = false,
     val sleepScore: SleepScoreBreakdown? = null,
+    val historySessions: List<SleepSession> = emptyList(),
     val showMorningCheckIn: Boolean = false,
     val message: String? = null
 )
@@ -60,8 +63,9 @@ class SleepViewModel @Inject constructor(
             combine(
                 trackingRepository.observeActive(),
                 trackingRepository.observeLatestCompleted(),
+                sleepRepository.observeRecentSessions(days = 365),
                 now
-            ) { active, completed, tick ->
+            ) { active, completed, history, tick ->
 
                 val checkIn = completed?.let {
                     morningCheckInRepository.getForSession(it.id)
@@ -75,6 +79,7 @@ class SleepViewModel @Inject constructor(
                     isStale = active != null &&
                         SleepTrackingRules.isStale(active.startedAt, tick),
                     sleepScore = _uiState.value.sleepScore,
+                    historySessions = history,
                     showMorningCheckIn = completed != null && checkIn == null,
                     message = _uiState.value.message
                 )
@@ -152,6 +157,11 @@ class SleepViewModel @Inject constructor(
                     latestCheckIn = checkIn,
                     sleepScore = score,
                     showMorningCheckIn = false,
+                    historySessions = (
+                        _uiState.value.historySessions
+                            .filterNot { it.id == sleepSession.id } +
+                            sleepSession
+                    ).sortedByDescending { it.date },
                     message = null
                 )
             } catch (t: Throwable) {

@@ -2,15 +2,12 @@ package com.nocta.app.domain.usecase
 
 import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepSession
+import com.nocta.app.domain.profile.SleepProfile
 import kotlin.math.max
-import kotlin.math.min
 
-/**
- * Pure function: no Android/DB dependencies, so this is directly unit-testable
- * (see app/src/test/.../CalculateSleepScoreTest.kt). Mirrors the documented
- * 30/25/20/15/10 weighting from the product spec.
- */
-class CalculateSleepScore(private val targetSleepMinutes: Int = 8 * 60) {
+class CalculateSleepScore(
+    private val sleepProfile: SleepProfile = SleepProfile(age = 18)
+) {
 
     operator fun invoke(recentSessions: List<SleepSession>): SleepScoreBreakdown {
         if (recentSessions.isEmpty()) {
@@ -23,51 +20,100 @@ class CalculateSleepScore(private val targetSleepMinutes: Int = 8 * 60) {
         val quality = scoreQuality(recentSessions)
         val routine = scoreRoutineAdherence(recentSessions)
 
-        return SleepScoreBreakdown(duration, consistency, timing, quality, routine)
+        return SleepScoreBreakdown(
+            durationScore = duration,
+            consistencyScore = consistency,
+            timingScore = timing,
+            qualityScore = quality,
+            routineScore = routine
+        )
     }
 
     private fun scoreDuration(sessions: List<SleepSession>): Int {
-        val avgMinutes = sessions.map { it.durationMinutes }.average()
-        val ratio = avgMinutes / targetSleepMinutes
-        // Full credit at or above target; graceful falloff below it.
-        return (min(ratio, 1.0) * 100).toInt().coerceIn(0, 100)
+        val averageMinutes = sessions
+            .map { it.durationMinutes }
+            .average()
+
+        val minimum = sleepProfile.recommendedMinMinutes
+        val maximum = sleepProfile.recommendedMaxMinutes
+
+        return when {
+            averageMinutes < minimum -> {
+                val ratio = averageMinutes / minimum.toDouble()
+                (ratio * 100).toInt().coerceIn(0, 100)
+            }
+
+            averageMinutes <= maximum -> {
+                100
+            }
+
+            else -> {
+                100
+            }
+        }
     }
 
     private fun scoreConsistency(sessions: List<SleepSession>): Int {
-        if (sessions.size < 2) return 70 // neutral default until there's enough history
-        val bedtimeMinutes = sessions.map { it.bedtime.hour * 60 + it.bedtime.minute }
+        if (sessions.size < 2) return 70
+
+        val bedtimeMinutes = sessions.map {
+            it.bedtime.hour * 60 + it.bedtime.minute
+        }
+
         val mean = bedtimeMinutes.average()
-        val variance = bedtimeMinutes.map { (it - mean) * (it - mean) }.average()
-        val stdDevMinutes = Math.sqrt(variance)
-        // 0 min stddev -> 100; 90+ min stddev -> near 0.
-        return max(0, 100 - (stdDevMinutes / 0.9).toInt()).coerceIn(0, 100)
+
+        val variance = bedtimeMinutes
+            .map { (it - mean) * (it - mean) }
+            .average()
+
+        val standardDeviationMinutes = Math.sqrt(variance)
+
+        return max(
+            0,
+            100 - (standardDeviationMinutes / 0.9).toInt()
+        ).coerceIn(0, 100)
     }
 
     private fun scoreTiming(sessions: List<SleepSession>): Int {
-        // Rewards bedtimes that fall in a commonly-recommended 21:00–00:00 window;
-        // this is a heuristic, not a clinical rule, and is presented as such in the UI.
-        val idealStart = 21 * 60
+        val averageBedtimeMinutes = sessions
+            .map { it.bedtime.hour * 60 + it.bedtime.minute }
+            .average()
+
+        val idealStart = 20 * 60
         val idealEnd = 24 * 60
-        val avgBedtimeMinutes = sessions.map { it.bedtime.hour * 60 + it.bedtime.minute }.average()
+
         val distance = when {
-            avgBedtimeMinutes in idealStart.toDouble()..idealEnd.toDouble() -> 0.0
-            avgBedtimeMinutes < idealStart -> idealStart - avgBedtimeMinutes
-            else -> avgBedtimeMinutes - idealEnd
+            averageBedtimeMinutes in idealStart.toDouble()..idealEnd.toDouble() -> 0.0
+            averageBedtimeMinutes < idealStart ->
+                idealStart - averageBedtimeMinutes
+            else ->
+                averageBedtimeMinutes - idealEnd
         }
-        return max(0, 100 - (distance / 1.2).toInt()).coerceIn(0, 100)
+
+        return max(
+            0,
+            100 - (distance / 1.5).toInt()
+        ).coerceIn(0, 100)
     }
 
     private fun scoreQuality(sessions: List<SleepSession>): Int {
-        val avgQuality = sessions.map { it.sleepQuality }.average() // 1-5 scale
-        return ((avgQuality - 1) / 4.0 * 100).toInt().coerceIn(0, 100)
+        val averageQuality = sessions
+            .map { it.sleepQuality }
+            .average()
+
+        return ((averageQuality - 1) / 4.0 * 100)
+            .toInt()
+            .coerceIn(0, 100)
     }
 
     private fun scoreRoutineAdherence(sessions: List<SleepSession>): Int {
-        // Placeholder heuristic until SleepRoutine completion tracking is wired in:
-        // uses low night-awakening counts as a weak proxy signal. Documented as
-        // an approximation — replace with real routine-completion data (see
-        // docs/03-SCREENS.md, Wind-Down Mode).
-        val avgAwakenings = sessions.map { it.nightAwakenings }.average()
-        return max(0, 100 - (avgAwakenings * 20).toInt()).coerceIn(0, 100)
+        val averageAwakenings = sessions
+            .map { it.nightAwakenings }
+            .average()
+
+        return max(
+            0,
+            100 - (averageAwakenings * 20).toInt()
+        ).coerceIn(0, 100)
     }
 }

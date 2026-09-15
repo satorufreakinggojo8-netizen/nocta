@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.nocta.app.data.local.MIGRATION_1_2
 import com.nocta.app.data.local.MIGRATION_2_3
+import com.nocta.app.data.local.MIGRATION_3_4
 import com.nocta.app.data.local.NoctaDatabase
 import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.data.repository.AiCoachRepositoryImpl
@@ -78,7 +79,8 @@ object DatabaseModule {
         )
             .addMigrations(
                 MIGRATION_1_2,
-                MIGRATION_2_3
+                MIGRATION_2_3,
+                MIGRATION_3_4
             )
             .build()
 
@@ -97,6 +99,10 @@ object DatabaseModule {
     @Provides
     fun provideMorningCheckInDao(db: NoctaDatabase) =
         db.morningCheckInDao()
+
+    @Provides
+    fun provideUserProfileDao(db: NoctaDatabase) =
+        db.userProfileDao()
 }
 
 @Module

@@ -1,4 +1,4 @@
-package com.nocta.app.di
+ackage com.nocta.app.di
 
 import android.content.Context
 import androidx.room.Room
@@ -9,10 +9,12 @@ import com.nocta.app.data.local.NoctaDatabase
 import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.data.repository.AiCoachRepositoryImpl
 import com.nocta.app.data.repository.MorningCheckInRepositoryImpl
+import com.nocta.app.data.repository.SleepProfileRepositoryImpl
 import com.nocta.app.data.repository.SleepRepositoryImpl
 import com.nocta.app.data.repository.SleepTrackingRepositoryImpl
 import com.nocta.app.domain.repository.AiCoachRepository
 import com.nocta.app.domain.repository.MorningCheckInRepository
+import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.repository.SleepTrackingRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
@@ -137,4 +139,9 @@ abstract class RepositoryModule {
     abstract fun bindMorningCheckInRepository(
         impl: MorningCheckInRepositoryImpl
     ): MorningCheckInRepository
+
+    @Binds
+    abstract fun bindSleepProfileRepository(
+        impl: SleepProfileRepositoryImpl
+    ): SleepProfileRepository
 }

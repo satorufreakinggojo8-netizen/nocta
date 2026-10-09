@@ -71,6 +71,19 @@ class CoachViewModel @Inject constructor(
         }
     }
 
+    fun observeConversationHistory(conversationId: String) {
+        viewModelScope.launch {
+            aiCoachRepository.observeConversation(conversationId).collect { persistedMessages ->
+                if (persistedMessages.isNotEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        conversationId = conversationId,
+                        messages = persistedMessages
+                    )
+                }
+            }
+        }
+    }
+
     fun onInputChanged(text: String) {
         _uiState.value = _uiState.value.copy(inputText = text)
     }

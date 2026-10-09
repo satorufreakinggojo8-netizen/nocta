@@ -3,27 +3,28 @@ import { prisma } from "../lib/prisma";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const SYSTEM_PROMPT = `You are Vela, the sleep coach inside the Nocta app.
+const SYSTEM_PROMPT = `You are Vela, the Shadow AI Sleep Coach inside Nocta.
 
-Personality: calm, intelligent, non-judgmental, evidence-informed, encouraging.
-Never alarmist. Never claim to be a doctor.
+Personality & Tone:
+- Sharp, focused, dark cinematic persona (inspired by elite shadow guides).
+- Calm, direct, deeply observant, encouraging, and evidence-informed.
+- Speak with quiet mastery: "Control your recovery. Level up your circadian discipline."
+- Never alarmist. Never claim to be a medical physician or doctor.
 
 Hard rules:
-- You are given a structured summary of the user's OWN logged sleep data below.
-  Only make claims about the user's habits that this summary actually supports.
-  Never invent numbers, trends, or events that aren't in the summary.
-- Clearly separate: (a) what the data shows, (b) general sleep guidance, and
-  (c) anything you're uncertain about. Say so explicitly when data is limited
-  (e.g. "with only 2 nights logged, this is an early signal, not a trend").
-- Do not diagnose medical conditions, guarantee outcomes, recommend prescription
-  medication, or recommend supplements.
-- If the user describes symptoms that could indicate a sleep disorder (e.g.
-  loud snoring with gasping, extreme daytime sleepiness, long-term insomnia),
-  gently suggest talking to a doctor or sleep specialist, without alarm.
-- Keep responses concise — a few sentences to a short paragraph, not an essay,
-  unless the user asks for a detailed routine or plan.
+- You are provided with structured sleep context and logged user data below.
+  Only make claims about the user's habits that this data actually supports.
+  Never invent numbers, trends, or false events.
+- Clearly separate:
+  (a) what the logged data confirms,
+  (b) evidence-backed sleep optimization advice, and
+  (c) any uncertainties due to limited logs.
+  Explicitly state when data is limited (e.g. "With only 1 night logged, this is a baseline reading, not a long-term pattern.").
+- Do not diagnose medical conditions, guarantee medical outcomes, or prescribe drugs or supplements.
+- If symptoms like severe gasping, sleep apnea, or extreme chronic fatigue arise, recommend consulting a medical professional calmly.
+- Keep responses concise and impactful — typically 2 to 4 powerful sentences unless asked for an in-depth bedtime protocol.
 
-This is a wellness app, not a medical diagnostic tool.`;
+This is a high-performance wellness and circadian optimization platform.`;
 
 interface SleepDataSummary {
   rangeLabel: string;
@@ -106,12 +107,12 @@ function minutesToClock(totalMinutes: number): string {
 
 function summaryToPromptText(summary: SleepDataSummary): string {
   if (summary.nightsLogged === 0) {
-    return "The user has not logged any sleep sessions yet. Do not state any data-derived claim — invite them to log a night first.";
+    return "The user has no recorded sleep logs in the database yet. Advise them to log a sleep session to begin data tracking.";
   }
   return [
     `Data window: ${summary.rangeLabel} (${summary.nightsLogged} nights logged).`,
     `Average sleep duration: ${summary.avgDurationMinutes} minutes.`,
-    `Average bedtime: ${summary.avgBedtime} (std dev ${summary.bedtimeStdDevMinutes} min — lower means more consistent).`,
+    `Average bedtime: ${summary.avgBedtime} (std dev ${summary.bedtimeStdDevMinutes} min — lower means better circadian consistency).`,
     `Average self-reported sleep quality: ${summary.avgQuality}/5.`,
     `Average night awakenings: ${summary.avgAwakenings}.`,
     summary.weekdayVsWeekendBedtimeGapMinutes !== null
@@ -132,13 +133,27 @@ export async function streamCoachResponse(
   userMessage: string,
   onToken: (token: string) => void
 ): Promise<void> {
-  const summary = await buildSleepSummary(userId);
+  let summary: SleepDataSummary;
+  try {
+    summary = await buildSleepSummary(userId);
+  } catch (err) {
+    summary = {
+      rangeLabel: "last 30 days",
+      nightsLogged: 0,
+      avgDurationMinutes: null,
+      avgBedtime: null,
+      bedtimeStdDevMinutes: null,
+      avgQuality: null,
+      avgAwakenings: null,
+      weekdayVsWeekendBedtimeGapMinutes: null
+    };
+  }
   const dataBlock = summaryToPromptText(summary);
 
   const stream = await anthropic.messages.stream({
-    model: "claude-sonnet-4-6",
+    model: "claude-3-5-sonnet-20241022",
     max_tokens: 600,
-    system: `${SYSTEM_PROMPT}\n\nUser's sleep data summary:\n${dataBlock}`,
+    system: `${SYSTEM_PROMPT}\n\nUser's logged sleep summary:\n${dataBlock}`,
     messages: [{ role: "user", content: userMessage }]
   });
 

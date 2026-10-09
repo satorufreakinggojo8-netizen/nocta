@@ -2,6 +2,7 @@ package com.nocta.app.domain.usecase
 
 import com.nocta.app.domain.model.DataSource
 import com.nocta.app.domain.model.SleepSession
+import com.nocta.app.domain.profile.SleepProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -9,7 +10,7 @@ import java.time.LocalDateTime
 
 class CalculateSleepScoreTest {
 
-    private val calculate = CalculateSleepScore(targetSleepMinutes = 8 * 60)
+    private val calculate = CalculateSleepScore(sleepProfile = SleepProfile(age = 18))
 
     private fun session(
         bedtimeHour: Int,
@@ -53,7 +54,7 @@ class CalculateSleepScoreTest {
 
     @Test
     fun `short sleep duration lowers the duration factor`() {
-        val sessions = listOf(session(bedtimeHour = 22, sleepHours = 4, quality = 3))
+        val sessions = listOf(session(bedtimeHour = 22, sleepHours = 3, quality = 3))
         val result = calculate(sessions)
         assertTrue(result.durationScore <= 55)
     }
@@ -73,5 +74,20 @@ class CalculateSleepScoreTest {
         val sessions = listOf(session(bedtimeHour = 22, sleepHours = 8, awakenings = 4))
         val result = calculate(sessions)
         assertTrue(result.routineScore < 40)
+    }
+
+    @Test
+    fun `child profile requires higher minimum duration than adult profile`() {
+        val childCalculate = CalculateSleepScore(sleepProfile = SleepProfile(age = 10)) // 9-12 hours target (540 mins min)
+        val adultCalculate = CalculateSleepScore(sleepProfile = SleepProfile(age = 25)) // 7-10 hours target (420 mins min)
+
+        val sessions = listOf(session(bedtimeHour = 22, sleepHours = 7)) // 420 minutes
+
+        val childResult = childCalculate(sessions)
+        val adultResult = adultCalculate(sessions)
+
+        // 7 hrs (420 min) is >= 420 min min for adult (100%), but < 540 min for child (~77%)
+        assertEquals(100, adultResult.durationScore)
+        assertTrue("Child score should be penalized for 7 hrs, got ${childResult.durationScore}", childResult.durationScore < 100)
     }
 }

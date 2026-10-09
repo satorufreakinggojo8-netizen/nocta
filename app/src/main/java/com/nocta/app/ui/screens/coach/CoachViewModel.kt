@@ -27,7 +27,8 @@ data class CoachUiState(
     val userAge: Int? = null,
     val targetSleepHours: Double? = null,
     val lastNightDurationHours: Double? = null,
-    val lastNightScore: Int? = null
+    val lastNightScore: Int? = null,
+    val lastUserMessageText: String? = null
 )
 
 @HiltViewModel
@@ -74,6 +75,18 @@ class CoachViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(inputText = text)
     }
 
+    fun retryLastMessage() {
+        val lastText = _uiState.value.lastUserMessageText
+        if (!lastText.isNullOrBlank() && !_uiState.value.isSending) {
+            // Remove the failed error message if present
+            val filteredMessages = _uiState.value.messages.filterNot {
+                it.role == MessageRole.ASSISTANT && it.content.contains("couldn't reach", ignoreCase = true)
+            }
+            _uiState.value = _uiState.value.copy(messages = filteredMessages)
+            send(promptOverride = lastText)
+        }
+    }
+
     fun send(promptOverride: String? = null) {
         val text = promptOverride ?: _uiState.value.inputText
         if (text.isBlank() || _uiState.value.isSending) return
@@ -100,11 +113,15 @@ class CoachViewModel @Inject constructor(
             text
         }
 
+        val userAlreadyExists = currentState.messages.any { it.role == MessageRole.USER && it.content == text }
+        val updatedMessages = if (userAlreadyExists) currentState.messages else currentState.messages + userMessage
+
         _uiState.value = currentState.copy(
-            messages = currentState.messages + userMessage,
+            messages = updatedMessages,
             inputText = "",
             isSending = true,
-            expression = CompanionExpression.THINKING
+            expression = CompanionExpression.THINKING,
+            lastUserMessageText = text
         )
 
         viewModelScope.launch {

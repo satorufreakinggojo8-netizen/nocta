@@ -13,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -26,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -79,7 +82,10 @@ fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
                 verticalArrangement = Arrangement.spacedBy(NoctaSpacing.sm)
             ) {
                 items(uiState.messages, key = { it.id + it.role }) { message ->
-                    AIMessageBubble(message)
+                    AIMessageBubble(
+                        message = message,
+                        onRetry = { viewModel.retryLastMessage() }
+                    )
                 }
             }
         }
@@ -351,6 +357,8 @@ private fun CoachInputBar(
                 },
                 enabled = enabled,
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (enabled && text.isNotBlank()) onSend() }),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color(0xFF161D30),
                     unfocusedContainerColor = Color(0xFF161D30),

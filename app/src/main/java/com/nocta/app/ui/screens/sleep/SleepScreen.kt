@@ -85,10 +85,10 @@ fun SleepScreen(
             }
         }
 
-        // Sleep-Quality Calendar Component
+        // Sleep-Quality Calendar Component connected to real SleepRepository stored sessions
         item {
             SleepCalendarCard(
-                sessions = emptyList() // Observes actual sessions from repository when integrated
+                sessions = state.historySessions
             )
         }
 

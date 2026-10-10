@@ -30,6 +30,7 @@ import com.nocta.app.domain.model.SleepDisturbance
 import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepTrackingSession
 import com.nocta.app.ui.components.MetricCard
+import com.nocta.app.ui.components.calendar.SleepCalendarCard
 import com.nocta.app.ui.theme.NoctaBackground
 import com.nocta.app.ui.theme.NoctaShapes
 import com.nocta.app.ui.theme.NoctaSpacing
@@ -82,6 +83,13 @@ fun SleepScreen(
                     onStart = viewModel::startTracking
                 )
             }
+        }
+
+        // Sleep-Quality Calendar Component
+        item {
+            SleepCalendarCard(
+                sessions = emptyList() // Observes actual sessions from repository when integrated
+            )
         }
 
         state.latestCompleted?.let { session ->

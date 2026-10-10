@@ -186,9 +186,10 @@ private fun CoachHeader(expression: CompanionExpression) {
                     Image(
                         painter = painterResource(id = imageRes),
                         contentDescription = "Nocta AI Coach",
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.TopCenter,
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(54.dp)
                             .clip(CircleShape)
                             .border(2.dp, Color(0xFF7C3AED), CircleShape)
                     )
@@ -257,9 +258,10 @@ private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
             Image(
                 painter = painterResource(id = R.drawable.coach_avatar_portrait),
                 contentDescription = "Vela Portrait",
-                contentScale = ContentScale.Crop,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.TopCenter,
                 modifier = Modifier
-                    .size(96.dp)
+                    .size(100.dp)
                     .clip(CircleShape)
                     .border(2.dp, Color(0xFFA78BFA), CircleShape)
             )

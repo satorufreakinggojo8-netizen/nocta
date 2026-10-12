@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.util.UUID
@@ -27,7 +28,6 @@ data class CoachUiState(
     val userAge: Int? = null,
     val targetSleepHours: Double? = null,
     val lastNightDurationHours: Double? = null,
-    val lastNightScore: Int? = null,
     val lastUserMessageText: String? = null
 )
 
@@ -43,6 +43,22 @@ class CoachViewModel @Inject constructor(
 
     init {
         observeContextData()
+        observeLatestSavedConversation()
+    }
+
+    private fun observeLatestSavedConversation() {
+        viewModelScope.launch {
+            aiCoachRepository.observeMostRecentConversationId().collectLatest { conversationId ->
+                if (conversationId != null) {
+                    aiCoachRepository.observeConversation(conversationId).collect { messages ->
+                        _uiState.value = _uiState.value.copy(
+                            conversationId = conversationId,
+                            messages = messages
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun observeContextData() {
@@ -61,23 +77,8 @@ class CoachViewModel @Inject constructor(
             sleepRepository.observeLastNight().collect { lastSession ->
                 if (lastSession != null) {
                     val durationHours = lastSession.durationMinutes / 60.0
-                    val score = sleepRepository.computeScore(listOf(lastSession)).overall
                     _uiState.value = _uiState.value.copy(
-                        lastNightDurationHours = durationHours,
-                        lastNightScore = score
-                    )
-                }
-            }
-        }
-    }
-
-    fun observeConversationHistory(conversationId: String) {
-        viewModelScope.launch {
-            aiCoachRepository.observeConversation(conversationId).collect { persistedMessages ->
-                if (persistedMessages.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        conversationId = conversationId,
-                        messages = persistedMessages
+                        lastNightDurationHours = durationHours
                     )
                 }
             }
@@ -104,20 +105,21 @@ class CoachViewModel @Inject constructor(
         val text = promptOverride ?: _uiState.value.inputText
         if (text.isBlank() || _uiState.value.isSending) return
 
+        val currentState = _uiState.value
+        val conversationId = currentState.conversationId ?: UUID.randomUUID().toString()
         val userMessage = AiMessage(
             id = UUID.randomUUID().toString(),
             role = MessageRole.USER,
             content = text,
-            createdAt = LocalDateTime.now()
+            createdAt = LocalDateTime.now(),
+            conversationId = conversationId
         )
 
         // Enrich text with available sleep context if present
-        val currentState = _uiState.value
         val contextInfo = buildList {
             currentState.userAge?.let { add("User Age: $it") }
             currentState.targetSleepHours?.let { add("Target Sleep Goal: ${"%.1f".format(it)} hrs") }
             currentState.lastNightDurationHours?.let { add("Last Night Sleep: ${"%.1f".format(it)} hrs") }
-            currentState.lastNightScore?.let { add("Last Night Score: $it/100") }
         }
 
         val enrichedText = if (contextInfo.isNotEmpty()) {
@@ -130,6 +132,7 @@ class CoachViewModel @Inject constructor(
         val updatedMessages = if (userAlreadyExists) currentState.messages else currentState.messages + userMessage
 
         _uiState.value = currentState.copy(
+            conversationId = conversationId,
             messages = updatedMessages,
             inputText = "",
             isSending = true,
@@ -138,16 +141,32 @@ class CoachViewModel @Inject constructor(
         )
 
         viewModelScope.launch {
-            aiCoachRepository.ask(_uiState.value.conversationId, enrichedText).collect { assistantMessage ->
-                val current = _uiState.value
-                val withoutPreviousStreamOfSameId = current.messages.filterNot { it.id == assistantMessage.id }
-                val newExpression = if (assistantMessage.isStreaming) CompanionExpression.RESPONDING else CompanionExpression.IDLE
+            try {
+                if (!userAlreadyExists) aiCoachRepository.saveUserMessage(userMessage)
+                aiCoachRepository.ask(conversationId, enrichedText).collect { assistantMessage ->
+                    val current = _uiState.value
+                    val withoutPreviousStreamOfSameId = current.messages.filterNot { it.id == assistantMessage.id }
+                    val newExpression = if (assistantMessage.isStreaming) CompanionExpression.RESPONDING else CompanionExpression.IDLE
 
+                    _uiState.value = current.copy(
+                        conversationId = current.conversationId ?: assistantMessage.conversationId,
+                        messages = withoutPreviousStreamOfSameId + assistantMessage,
+                        isSending = assistantMessage.isStreaming,
+                        expression = newExpression
+                    )
+                }
+            } catch (_: Exception) {
+                val current = _uiState.value
                 _uiState.value = current.copy(
-                    conversationId = current.conversationId ?: assistantMessage.id,
-                    messages = withoutPreviousStreamOfSameId + assistantMessage,
-                    isSending = assistantMessage.isStreaming,
-                    expression = newExpression
+                    messages = current.messages + AiMessage(
+                        id = UUID.randomUUID().toString(),
+                        role = MessageRole.ASSISTANT,
+                        content = "I couldn't save this message. Please try again.",
+                        createdAt = LocalDateTime.now(),
+                        conversationId = conversationId
+                    ),
+                    isSending = false,
+                    expression = CompanionExpression.IDLE
                 )
             }
         }

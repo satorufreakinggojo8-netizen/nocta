@@ -81,6 +81,7 @@ model SleepSession {
   estimatedSleepTime DateTime
   wakeTime           DateTime
   nightAwakenings    Int        @default(0)
+  awakeMinutes       Int        @default(0)
   sleepQuality       Int // 1-5
   morningEnergy      Int // 1-5
   source             DataSource @default(SELF_REPORTED)

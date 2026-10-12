@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDateTime
+import java.time.LocalDate
 
 class CalculateSleepScoreTest {
 
@@ -62,11 +63,39 @@ class CalculateSleepScoreTest {
     @Test
     fun `inconsistent bedtimes lower the consistency factor`() {
         val sessions = listOf(
-            session(bedtimeHour = 21, sleepHours = 8),
-            session(bedtimeHour = 1, sleepHours = 8) // wildly different bedtime hour
+            sessionAt(LocalDate.of(2026, 1, 1), 21, 0),
+            sessionAt(LocalDate.of(2026, 1, 2), 1, 0),
+            sessionAt(LocalDate.of(2026, 1, 3), 21, 0)
         )
         val result = calculate(sessions)
         assertTrue(result.consistencyScore < 60)
+    }
+
+    @Test
+    fun `bedtimes across midnight are treated as close together`() {
+        val sessions = listOf(
+            sessionAt(LocalDate.of(2026, 1, 1), 23, 50),
+            sessionAt(LocalDate.of(2026, 1, 2), 0, 10),
+            sessionAt(LocalDate.of(2026, 1, 3), 23, 55)
+        )
+
+        assertTrue(calculate(sessions).consistencyScore >= 90)
+    }
+
+    @Test
+    fun `very long sleep no longer receives the same duration score as target sleep`() {
+        val target = session(bedtimeHour = 22, sleepHours = 8)
+        val veryLong = session(bedtimeHour = 22, sleepHours = 14)
+
+        assertTrue(calculate(listOf(veryLong)).durationScore < calculate(listOf(target)).durationScore)
+    }
+
+    @Test
+    fun `one night does not claim a proven schedule pattern`() {
+        val result = calculate(listOf(session(bedtimeHour = 22, sleepHours = 8)))
+
+        assertEquals(70, result.consistencyScore)
+        assertEquals(70, result.timingScore)
     }
 
     @Test
@@ -86,8 +115,25 @@ class CalculateSleepScoreTest {
         val childResult = childCalculate(sessions)
         val adultResult = adultCalculate(sessions)
 
-        // 7 hrs (420 min) is >= 420 min min for adult (100%), but < 540 min for child (~77%)
-        assertEquals(100, adultResult.durationScore)
-        assertTrue("Child score should be penalized for 7 hrs, got ${childResult.durationScore}", childResult.durationScore < 100)
+        // Seven hours meets the adult minimum but falls below the child's range.
+        assertTrue("Adult minimum should still score reasonably, got ${adultResult.durationScore}", adultResult.durationScore >= 80)
+        assertTrue("Child score should be below adult score, got ${childResult.durationScore}", childResult.durationScore < adultResult.durationScore)
+    }
+
+    private fun sessionAt(date: LocalDate, hour: Int, minute: Int): SleepSession {
+        val bedtime = date.atTime(hour, minute)
+        val asleep = bedtime.plusMinutes(10)
+        return SleepSession(
+            id = date.toString(),
+            date = date,
+            bedtime = bedtime,
+            sleepAttemptTime = bedtime,
+            estimatedSleepTime = asleep,
+            wakeTime = asleep.plusHours(8),
+            nightAwakenings = 0,
+            sleepQuality = 4,
+            morningEnergy = 4,
+            source = DataSource.SELF_REPORTED
+        )
     }
 }

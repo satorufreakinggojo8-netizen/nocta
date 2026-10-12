@@ -7,7 +7,9 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/sessions", async (req: AuthedRequest, res) => {
-  const since = typeof req.query.since === "string" ? new Date(req.query.since) : new Date(0);
+  const sinceQuery = typeof req.query.since === "string" ? req.query.since : null;
+  const since = sinceQuery ? new Date(sinceQuery) : new Date(0);
+  if (Number.isNaN(since.getTime())) return res.status(400).json({ error: "Invalid since date" });
   const sessions = await prisma.sleepSession.findMany({
     where: { userId: req.userId!, date: { gte: since } },
     orderBy: { date: "desc" }
@@ -23,6 +25,7 @@ const sessionSchema = z.object({
   estimatedSleepTime: z.string(),
   wakeTime: z.string(),
   nightAwakenings: z.number().int().min(0),
+  awakeMinutes: z.number().int().min(0).default(0),
   sleepQuality: z.number().int().min(1).max(5),
   morningEnergy: z.number().int().min(1).max(5),
   source: z.enum(["SELF_REPORTED", "ESTIMATED", "HEALTH_CONNECT", "WEARABLE"])
@@ -40,6 +43,7 @@ router.post("/sessions", async (req: AuthedRequest, res) => {
     estimatedSleepTime: new Date(data.estimatedSleepTime),
     wakeTime: new Date(data.wakeTime),
     nightAwakenings: data.nightAwakenings,
+    awakeMinutes: data.awakeMinutes,
     sleepQuality: data.sleepQuality,
     morningEnergy: data.morningEnergy,
     source: data.source

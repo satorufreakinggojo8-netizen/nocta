@@ -20,29 +20,31 @@ data class SleepSession(
     val nightAwakenings: Int,
     val sleepQuality: Int,      // 1-5, self-reported
     val morningEnergy: Int,     // 1-5, self-reported
-    val source: DataSource
+    val source: DataSource,
+    val awakeMinutes: Int = 0  // self-reported wake time after sleep onset
 ) {
     val durationMinutes: Long
-        get() = java.time.Duration.between(estimatedSleepTime, wakeTime).toMinutes()
+        get() = (java.time.Duration.between(estimatedSleepTime, wakeTime).toMinutes() - awakeMinutes.coerceAtLeast(0))
+            .coerceAtLeast(0)
 }
 
 /**
- * Breakdown backing the Home screen's Sleep Score. Weights match the
- * documented, transparent formula — this is presented to users as a
- * wellness metric, never a medical diagnostic score.
+ * Breakdown backing the Sleep Score. Duration is weighted 40%, bedtime
+ * regularity 25%, midpoint regularity 10%, self-reported quality/energy 15%,
+ * and awakenings 10%. The score is a wellness metric, never a diagnosis.
  */
 data class SleepScoreBreakdown(
-    val durationScore: Int,      // 0-100, weight 30%
+    val durationScore: Int,      // 0-100, weight 40%
     val consistencyScore: Int,   // 0-100, weight 25%
-    val timingScore: Int,        // 0-100, weight 20%
+    val timingScore: Int,        // 0-100, weight 10%
     val qualityScore: Int,       // 0-100, weight 15%
     val routineScore: Int        // 0-100, weight 10%
 ) {
     val overall: Int
         get() = (
-            durationScore * 0.30 +
+            durationScore * 0.40 +
             consistencyScore * 0.25 +
-            timingScore * 0.20 +
+            timingScore * 0.10 +
             qualityScore * 0.15 +
             routineScore * 0.10
         ).toInt().coerceIn(0, 100)

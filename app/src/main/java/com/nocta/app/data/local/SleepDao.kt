@@ -24,13 +24,3 @@ interface SleepDao {
     @Query("UPDATE sleep_sessions SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: String)
 }
-
-@Dao
-interface AiMessageDao {
-
-    @Query("SELECT * FROM ai_messages WHERE conversationId = :conversationId ORDER BY createdAtEpochMillis ASC")
-    fun observeConversation(conversationId: String): Flow<List<AiMessageEntity>>
-
-    @Insert
-    suspend fun insert(message: AiMessageEntity)
-}

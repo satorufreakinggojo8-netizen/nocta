@@ -17,7 +17,8 @@ data class SleepSessionDto(
     val nightAwakenings: Int,
     val sleepQuality: Int,
     val morningEnergy: Int,
-    val source: String
+    val source: String,
+    val awakeMinutes: Int = 0
 )
 
 data class AiCoachRequestDto(val conversationId: String?, val message: String)

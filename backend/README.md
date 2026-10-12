@@ -9,7 +9,7 @@ to Anthropic so the mobile client never holds an API key.
 cp .env.example .env   # fill in DATABASE_URL, JWT secrets, ANTHROPIC_API_KEY
 npm install
 npm run prisma:generate
-npm run prisma:migrate   # creates tables from prisma/schema.prisma
+npm run prisma:migrate -- --name init   # create/apply an initial dev migration
 npm run dev
 ```
 
@@ -18,7 +18,8 @@ npm run dev
 - `POST /v1/auth/register`, `/login`, `/refresh` — JWT access (15m) + refresh (30d)
 - `GET/POST /v1/sleep/sessions` — CRUD for sleep sessions (auth required)
 - `POST /v1/ai/coach` — streams Vela's response as Server-Sent Events; persists
-  both the user's message and the full assistant reply to `AiConversation`/`AiMessage`
+  both the user's message and the full assistant reply to `AiConversation`/`AiMessage`,
+  and includes the previous 12 turns in the next prompt
 - `GET /v1/ai/coach/:conversationId` — fetch a past conversation
 
 ## Not yet implemented (documented, not faked)
@@ -27,6 +28,10 @@ Insight computation jobs (Daily/WeeklyInsight population), notification
 scheduling/delivery, and Health Connect data ingestion are modeled in the
 schema but have no route/service yet — see `docs/03-SCREENS.md` in the repo
 root for what depends on each.
+
+`SleepSession.awakeMinutes` is now in the Prisma model and API contract. Generate
+and review its database migration before deploying the backend; no live
+database migration has been run.
 
 ## Where the AI grounding happens
 

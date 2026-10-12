@@ -7,13 +7,14 @@ Nothing here reuses Somnr's name, marks, or UI — this is an independent design
 
 Nocta is a client/server system:
 
-- **Android client** (Kotlin, Jetpack Compose) — all user-facing UI, local caching,
-  offline-first logging, Health Connect integration.
-- **Backend API** (Node.js/TypeScript, Express, PostgreSQL via Prisma) — auth,
-  sleep data persistence, insight computation, and the AI coach proxy.
+- **Android client** (Kotlin, Jetpack Compose) — user-facing UI, Room-backed
+  local logging, and the wake-window notification. Health Connect is not wired.
+- **Backend API** (Node.js/TypeScript, Express, PostgreSQL via Prisma) — protected
+  auth, sleep persistence, and the AI coach proxy. The Android app does not yet
+  implement the JWT login/refresh flow required by the protected routes.
 - **LLM provider** (Anthropic API) — called only from the backend, never from the
-  client. The backend assembles a data-grounded prompt and validates the reply
-  before it reaches the app.
+  client. The backend assembles a prompt from logged sleep data and streams the
+  provider's reply to the app.
 
 Data flow for a typical AI question:
 

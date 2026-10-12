@@ -19,8 +19,7 @@ import javax.inject.Inject
 
 class SleepRepositoryImpl @Inject constructor(
     private val sleepDao: SleepDao,
-    private val api: NoctaApi,
-    private val calculateSleepScore: CalculateSleepScore
+    private val api: NoctaApi
 ) : SleepRepository {
 
     override fun observeLastNight(): Flow<SleepSession?> =
@@ -30,9 +29,6 @@ class SleepRepositoryImpl @Inject constructor(
         val since = LocalDate.now().minusDays(days.toLong()).toEpochDay()
         return sleepDao.observeSince(since).map { list -> list.map { it.toDomain() } }
     }
-
-    override fun computeScore(sessions: List<SleepSession>): SleepScoreBreakdown =
-        calculateSleepScore(sessions)
 
     override suspend fun logSession(session: SleepSession) {
         // Write locally first (offline-first) — sync happens in syncPending().
@@ -89,7 +85,8 @@ private fun SleepSessionEntity.toDto() = SleepSessionDto(
     nightAwakenings = nightAwakenings,
     sleepQuality = sleepQuality,
     morningEnergy = morningEnergy,
-    source = source
+    source = source,
+    awakeMinutes = awakeMinutes
 )
 
 private fun epochMinuteToDateTime(epochMinute: Long): LocalDateTime =

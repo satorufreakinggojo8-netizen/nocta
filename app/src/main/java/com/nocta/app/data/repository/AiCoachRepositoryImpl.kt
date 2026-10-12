@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 
@@ -28,6 +28,21 @@ class AiCoachRepositoryImpl @Inject constructor(
     private val aiMessageDao: AiMessageDao
 ) : AiCoachRepository {
 
+    override suspend fun saveUserMessage(message: AiMessage) {
+        aiMessageDao.insert(
+            AiMessageEntity(
+                id = message.id,
+                conversationId = requireNotNull(message.conversationId) { "User message must belong to a conversation." },
+                role = MessageRole.USER.name,
+                content = message.content,
+                createdAtEpochMillis = message.createdAt.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            )
+        )
+    }
+
+    override fun observeMostRecentConversationId(): Flow<String?> =
+        aiMessageDao.observeMostRecentConversationId()
+
     override fun ask(conversationId: String?, message: String): Flow<AiMessage> = callbackFlow {
         val messageId = UUID.randomUUID().toString()
         val convoId = conversationId ?: UUID.randomUUID().toString()
@@ -41,8 +56,9 @@ class AiCoachRepositoryImpl @Inject constructor(
                 while (!source.exhausted()) {
                     val line = source.readUtf8Line() ?: break
                     if (line.startsWith("data:")) {
-                        val token = line.removePrefix("data:").trim()
-                        if (token == "[DONE]") break
+                        val payload = line.removePrefix("data:").removePrefix(" ")
+                        if (payload == "[DONE]") break
+                        val token = org.json.JSONObject(payload).getString("token")
                         builder.append(token)
                         trySend(
                             AiMessage(

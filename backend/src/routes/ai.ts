@@ -26,9 +26,16 @@ router.post("/coach", async (req: AuthedRequest, res) => {
     conversationId = convo.id;
   }
 
-  await prisma.aiMessage.create({
+  const currentUserMessage = await prisma.aiMessage.create({
     data: { conversationId, role: "USER", content: message }
   });
+
+  const priorMessages = await prisma.aiMessage.findMany({
+    where: { conversationId, id: { not: currentUserMessage.id } },
+    orderBy: { createdAt: "desc" },
+    take: 12
+  });
+  priorMessages.reverse();
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -39,8 +46,8 @@ router.post("/coach", async (req: AuthedRequest, res) => {
   try {
     await streamCoachResponse(userId, message, (token) => {
       fullResponse += token;
-      res.write(`data: ${token}\n\n`);
-    });
+      res.write(`data: ${JSON.stringify({ token })}\n\n`);
+    }, priorMessages.map((m) => ({ role: m.role.toLowerCase() as "user" | "assistant", content: m.content })));
   } catch (err) {
     console.error("AI coach stream error:", err);
     res.write(`data: I couldn't reach the coach right now. Please try again in a moment.\n\n`);

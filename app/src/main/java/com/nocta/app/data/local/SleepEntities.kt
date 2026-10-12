@@ -18,6 +18,7 @@ data class SleepSessionEntity(
     val nightAwakenings: Int,
     val sleepQuality: Int,
     val morningEnergy: Int,
+    @androidx.room.ColumnInfo(defaultValue = "0") val awakeMinutes: Int = 0,
     val source: String,          // DataSource.name
     val synced: Boolean = false  // true once backend has confirmed persistence
 )

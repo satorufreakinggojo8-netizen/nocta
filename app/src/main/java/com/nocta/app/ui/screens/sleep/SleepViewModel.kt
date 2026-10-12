@@ -148,22 +148,7 @@ class SleepViewModel @Inject constructor(
                 )
 
                 sleepRepository.logSession(sleepSession)
-
-                val score = calculateSleepScore(
-                    listOf(sleepSession)
-                )
-
-                _uiState.value = _uiState.value.copy(
-                    latestCheckIn = checkIn,
-                    sleepScore = score,
-                    showMorningCheckIn = false,
-                    historySessions = (
-                        _uiState.value.historySessions
-                            .filterNot { it.id == sleepSession.id } +
-                            sleepSession
-                    ).sortedByDescending { it.date },
-                    message = null
-                )
+                _uiState.value = _uiState.value.copy(message = null)
             } catch (t: Throwable) {
                 emitMessage(t)
             }

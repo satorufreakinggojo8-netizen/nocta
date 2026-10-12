@@ -10,7 +10,7 @@ narrative version.
   baseline onboarding answers (caffeine, exercise timing, screen use, etc.),
   computed at onboarding, editable later.
 - **SleepSession** — one row per night: userId, date, bedtime, sleepAttemptTime,
-  estimatedSleepTime, wakeTime, nightAwakenings, sleepQuality (1-5),
+  estimatedSleepTime, wakeTime, nightAwakenings, awakeMinutes, sleepQuality (1-5),
   morningEnergy (1-5), source (enum: SELF_REPORTED, HEALTH_CONNECT, WEARABLE),
   notes.
 - **SleepLog** — free-form habit log entries tied to a session or day: caffeine
@@ -31,7 +31,8 @@ narrative version.
 - **UserSettings** — userId (1:1), notification toggles, AI settings (data
   sharing scope), theme preference, units.
 
-All tables carry `createdAt`/`updatedAt`. Foreign keys cascade on user
-deletion (supports the Profile → Delete Account requirement). Indexes on
-`(userId, date)` for SleepSession/SleepLog since almost every query filters
-by user and a date range.
+Prisma tables are backend storage; Android Room tables are a separate local
+cache and are defined in `app/src/main/java/com/nocta/app/data/local`.
+`SleepSession.awakeMinutes` was added to the Prisma model and API contract. A
+database migration must be generated, reviewed, and applied before deploying
+this backend change. No production database has been changed.

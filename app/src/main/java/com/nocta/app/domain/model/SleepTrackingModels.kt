@@ -10,8 +10,9 @@ import java.time.Instant
  * morningEnergy, nightAwakenings) that cannot be known while a session is
  * still running, and must never be inferred from raw timestamps. A tracking
  * session is therefore only ever a [startedAt] + optional [endedAt] pair,
- * plus the [DataSource] that produced it. It is NOT fed into
- * CalculateSleepScore — the score pipeline is unchanged.
+ * plus the [DataSource] that produced it.
+ * CalculateSleepScore only receives completed SleepSession records, never a
+ * raw start/stop interval without the morning check-in values.
  */
 data class SleepTrackingSession(
     val id: String,

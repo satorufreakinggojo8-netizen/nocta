@@ -1,32 +1,29 @@
 # Screen Checklist
 
-Status legend: ✅ implemented in this scaffold · 🧩 stubbed (route + empty
-Composable + TODO, wired into nav) · 📝 documented only (pattern to follow)
+Status legend: ✅ implemented locally · ◐ partial · ☐ not implemented. A local
+screen or data path does not prove a configured backend or device integration.
 
 | # | Screen              | Status | Notes |
 |---|---------------------|--------|-------|
-| 1 | Splash              | ✅ | Logo + auth check → routes to Welcome or Home |
-| 2 | Welcome             | ✅ | Value prop, Get Started |
-| 3 | Onboarding          | 🧩 | Multi-step scaffold present; follows Home's ViewModel pattern |
-| 4 | Sleep Profile        | 🧩 | Score reveal screen; reuses `SleepScoreCard` |
+| 1 | Splash              | ☐ | |
+| 2 | Welcome             | ☐ | |
+| 3 | Onboarding          | ☐ | |
+| 4 | Sleep Profile        | ◐ | Age-based duration targets are editable in Profile |
 | 5 | Home                | ✅ | Full: score, last night, recommendation, debt, quick actions |
-| 6 | Sleep Details       | 🧩 | |
-| 7 | Log Sleep           | 🧩 | Form fields defined in domain model already |
-| 8 | Sleep History       | 🧩 | |
-| 9 | Sleep Optimization  | 🧩 | Content categories modeled in `OptimizationTip` |
-| 10 | Wind-Down Mode      | 🧩 | State machine outlined in `WindDownViewModel` |
+| 6 | Sleep Details       | ✅ | Night details plus the shared score over up to 14 recent nights |
+| 7 | Log Sleep           | ✅ | Manual local sleep log and check-in |
+| 8 | Sleep History       | ✅ | Three-year calendar and recent night list in Insights |
+| 9 | Sleep Optimization  | ◐ | Rule-based daily recommendation on Home |
+| 10 | Wind-Down Mode      | ✅ | Guidance and on-screen breathing timer |
 | 11 | AI Coach (landing)  | ✅ | Suggested prompts grid |
 | 12 | AI Conversation     | ✅ | Full streaming chat implementation |
-| 13 | Insights            | 🧩 | Chart components ready (`SleepChart`), data wiring pending |
-| 14 | Weekly Report       | 🧩 | |
-| 15 | Goals               | 🧩 | |
-| 16 | Notifications       | 🧩 | |
-| 17 | Profile             | 🧩 | |
-| 18 | Settings            | 🧩 | |
-| 19 | Privacy             | 🧩 | |
-| 20 | Health Connect      | 🧩 | Adapter interface defined, no fake data returned |
+| 13 | Insights            | ✅ | Score/duration charts and daytime recovery logs |
+| 14 | Weekly Report       | ☐ | |
+| 15 | Goals               | ☐ | |
+| 16 | Notifications       | ◐ | Configurable wake window notification and guide |
+| 17 | Profile             | ✅ | Profile editing, wake alarm preferences, reset |
+| 18 | Settings            | ◐ | Integrated into Profile |
+| 19 | Privacy             | ☐ | |
+| 20 | Health Connect      | ☐ | Dependency present only; no data synced |
 
-Every 🧩 screen has a real Compose route registered in `NoctaNavGraph.kt` and a
-real (if minimal) ViewModel — nothing renders fabricated data. They render an
-explicit "Coming soon" state rather than pretending to be finished, per the
-no-fake-implementation requirement.
+A local screen or data path does not prove a configured backend or device integration.

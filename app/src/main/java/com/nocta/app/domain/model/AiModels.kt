@@ -9,7 +9,8 @@ data class AiMessage(
     val role: MessageRole,
     val content: String,
     val createdAt: LocalDateTime,
-    val isStreaming: Boolean = false
+    val isStreaming: Boolean = false,
+    val conversationId: String? = null
 )
 
 data class AiConversation(

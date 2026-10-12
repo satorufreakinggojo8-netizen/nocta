@@ -61,30 +61,35 @@ async function buildSleepSummary(userId: string): Promise<SleepDataSummary> {
   }
 
   const durations = sessions.map(
-    (s) => (s.wakeTime.getTime() - s.estimatedSleepTime.getTime()) / 60000
+    (s) => Math.max(
+      0,
+      (s.wakeTime.getTime() - s.estimatedSleepTime.getTime()) / 60000 - s.awakeMinutes
+    )
   );
   const bedtimeMinutes = sessions.map((s) => s.bedtime.getHours() * 60 + s.bedtime.getMinutes());
-  const avgBedtimeMin = mean(bedtimeMinutes);
+  const avgBedtimeMin = circularMean(bedtimeMinutes);
 
   const weekday = sessions.filter((s) => ![0, 6].includes(s.date.getDay()));
   const weekend = sessions.filter((s) => [0, 6].includes(s.date.getDay()));
   const weekdayAvg = weekday.length
-    ? mean(weekday.map((s) => s.bedtime.getHours() * 60 + s.bedtime.getMinutes()))
+    ? circularMean(weekday.map((s) => s.bedtime.getHours() * 60 + s.bedtime.getMinutes()))
     : null;
   const weekendAvg = weekend.length
-    ? mean(weekend.map((s) => s.bedtime.getHours() * 60 + s.bedtime.getMinutes()))
+    ? circularMean(weekend.map((s) => s.bedtime.getHours() * 60 + s.bedtime.getMinutes()))
     : null;
 
   return {
     rangeLabel: "last 30 days",
     nightsLogged: sessions.length,
     avgDurationMinutes: Math.round(mean(durations)),
-    avgBedtime: minutesToClock(avgBedtimeMin),
-    bedtimeStdDevMinutes: Math.round(stdDev(bedtimeMinutes)),
+    avgBedtime: avgBedtimeMin === null ? null : minutesToClock(avgBedtimeMin),
+    bedtimeStdDevMinutes: avgBedtimeMin === null
+      ? null
+      : Math.round(circularStdDev(bedtimeMinutes, avgBedtimeMin)),
     avgQuality: Math.round(mean(sessions.map((s) => s.sleepQuality)) * 10) / 10,
     avgAwakenings: Math.round(mean(sessions.map((s) => s.nightAwakenings)) * 10) / 10,
     weekdayVsWeekendBedtimeGapMinutes:
-      weekdayAvg !== null && weekendAvg !== null ? Math.round(Math.abs(weekdayAvg - weekendAvg)) : null
+      weekdayAvg !== null && weekendAvg !== null ? Math.round(circularDistance(weekdayAvg, weekendAvg)) : null
   };
 }
 
@@ -92,14 +97,30 @@ function mean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-function stdDev(values: number[]): number {
-  const m = mean(values);
-  return Math.sqrt(mean(values.map((v) => (v - m) ** 2)));
+const MINUTES_PER_DAY = 24 * 60;
+
+function circularMean(values: number[]): number | null {
+  const angles = values.map((value) => value / MINUTES_PER_DAY * 2 * Math.PI);
+  const x = angles.reduce((sum, angle) => sum + Math.cos(angle), 0);
+  const y = angles.reduce((sum, angle) => sum + Math.sin(angle), 0);
+  if (Math.hypot(x, y) / values.length < 0.1) return null;
+  return ((Math.atan2(y, x) / (2 * Math.PI) * MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+}
+
+function circularDistance(a: number, b: number): number {
+  const direct = Math.abs(a - b);
+  return Math.min(direct, MINUTES_PER_DAY - direct);
+}
+
+function circularStdDev(values: number[], meanMinutes: number | null): number {
+  if (meanMinutes === null) return 0;
+  return Math.sqrt(mean(values.map((value) => circularDistance(value, meanMinutes) ** 2)));
 }
 
 function minutesToClock(totalMinutes: number): string {
-  const h = Math.floor(totalMinutes / 60) % 24;
-  const m = Math.round(totalMinutes % 60);
+  const roundedMinutes = ((Math.round(totalMinutes) % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const h = Math.floor(roundedMinutes / 60);
+  const m = roundedMinutes % 60;
   const period = h >= 12 ? "PM" : "AM";
   const displayHour = h % 12 === 0 ? 12 : h % 12;
   return `${displayHour}:${m.toString().padStart(2, "0")} ${period}`;
@@ -112,7 +133,9 @@ function summaryToPromptText(summary: SleepDataSummary): string {
   return [
     `Data window: ${summary.rangeLabel} (${summary.nightsLogged} nights logged).`,
     `Average sleep duration: ${summary.avgDurationMinutes} minutes.`,
-    `Average bedtime: ${summary.avgBedtime} (std dev ${summary.bedtimeStdDevMinutes} min — lower means better circadian consistency).`,
+    summary.avgBedtime !== null
+      ? `Average bedtime: ${summary.avgBedtime} (circular variability ${summary.bedtimeStdDevMinutes} min — lower means more regular clock times).`
+      : "Logged bedtimes do not have a stable circular average.",
     `Average self-reported sleep quality: ${summary.avgQuality}/5.`,
     `Average night awakenings: ${summary.avgAwakenings}.`,
     summary.weekdayVsWeekendBedtimeGapMinutes !== null
@@ -131,7 +154,8 @@ function summaryToPromptText(summary: SleepDataSummary): string {
 export async function streamCoachResponse(
   userId: string,
   userMessage: string,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  priorMessages: Array<{ role: "user" | "assistant"; content: string }> = []
 ): Promise<void> {
   let summary: SleepDataSummary;
   try {
@@ -154,7 +178,10 @@ export async function streamCoachResponse(
     model: "claude-3-5-sonnet-20241022",
     max_tokens: 600,
     system: `${SYSTEM_PROMPT}\n\nUser's logged sleep summary:\n${dataBlock}`,
-    messages: [{ role: "user", content: userMessage }]
+    messages: [
+      ...priorMessages,
+      { role: "user", content: userMessage }
+    ]
   });
 
   stream.on("text", (token) => onToken(token));

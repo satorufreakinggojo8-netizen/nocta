@@ -60,6 +60,8 @@ fun HomeScreen(
                     uiState.scoreBreakdown?.let { breakdown ->
                         SleepScoreCard(
                             breakdown = breakdown,
+                            mode = uiState.scoreCardMode,
+                            onModeChange = viewModel::setScoreCardMode,
                             onTap = {
                                 uiState.lastNight?.id?.let(onOpenSleepDetails)
                             }

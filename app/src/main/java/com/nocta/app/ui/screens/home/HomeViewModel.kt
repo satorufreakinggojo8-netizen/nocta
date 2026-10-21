@@ -3,6 +3,7 @@ package com.nocta.app.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nocta.app.domain.model.*
+import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,12 +19,14 @@ data class HomeUiState(
     val lastNight: SleepSession? = null,
     val scoreBreakdown: SleepScoreBreakdown? = null,
     val sleepDebt: SleepDebt? = null,
-    val todaysRecommendation: Recommendation? = null
+    val todaysRecommendation: Recommendation? = null,
+    val scoreCardMode: SleepScoreCardMode = SleepScoreCardMode.STANDARD
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
+    private val settingsRepository: SettingsRepository,
     private val calculateSleepScore: CalculateSleepScore
 ) : ViewModel() {
 
@@ -42,11 +45,23 @@ class HomeViewModel @Inject constructor(
                     lastNight = lastNight,
                     scoreBreakdown = breakdown,
                     sleepDebt = estimateSleepDebt(recent),
-                    todaysRecommendation = pickRecommendation(lastNight, breakdown)
+                    todaysRecommendation = pickRecommendation(lastNight, breakdown),
+                    scoreCardMode = _uiState.value.scoreCardMode
                 )
             }.collect { _uiState.value = it }
         }
+        viewModelScope.launch {
+            settingsRepository.observeSleepScoreCardMode().collect { mode ->
+                _uiState.value = _uiState.value.copy(scoreCardMode = mode)
+            }
+        }
         viewModelScope.launch { sleepRepository.syncPending() }
+    }
+
+    fun setScoreCardMode(mode: SleepScoreCardMode) {
+        viewModelScope.launch {
+            settingsRepository.setSleepScoreCardMode(mode)
+        }
     }
 
     private fun estimateSleepDebt(recent: List<SleepSession>): SleepDebt {

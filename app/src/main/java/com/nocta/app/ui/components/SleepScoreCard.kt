@@ -19,17 +19,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nocta.app.domain.model.SleepScoreBreakdown
+import com.nocta.app.domain.model.SleepScoreCardMode
 import com.nocta.app.ui.theme.*
 
 /**
  * The Home screen's hero element. Animates from 0 to the true score once on
  * first composition (per the "score counting animation" requirement) rather
  * than re-animating on every recomposition.
+ *
+ * Three display modes are supported — Compact (score and verdict only),
+ * Standard (adds the five factor pips) and Expanded (adds the per-factor
+ * values with bars and a short explanation). The mode is chosen with the
+ * selector at the bottom of the card and is persisted through
+ * SettingsRepository, so it survives an app restart.
  */
 @Composable
 fun SleepScoreCard(
     breakdown: SleepScoreBreakdown,
+    mode: SleepScoreCardMode,
+    onModeChange: (SleepScoreCardMode) -> Unit,
     onTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -53,7 +63,53 @@ fun SleepScoreCard(
                 indication = null,
                 onClick = onTap
             )
-            .padding(NoctaSpacing.lg),
+            .padding(if (mode == SleepScoreCardMode.COMPACT) NoctaSpacing.md else NoctaSpacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (mode) {
+            SleepScoreCardMode.COMPACT -> CompactScoreContent(breakdown, animatedScore)
+            SleepScoreCardMode.STANDARD -> StandardScoreContent(breakdown, animatedScore)
+            SleepScoreCardMode.EXPANDED -> ExpandedScoreContent(breakdown, animatedScore)
+        }
+
+        Spacer(Modifier.height(NoctaSpacing.md))
+
+        ScoreCardModeSelector(current = mode, onModeChange = onModeChange)
+    }
+}
+
+@Composable
+private fun CompactScoreContent(breakdown: SleepScoreBreakdown, animatedScore: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$animatedScore",
+            style = NoctaScoreDisplay.copy(fontSize = 44.sp),
+            color = scoreColor(breakdown.overall)
+        )
+        Spacer(Modifier.width(NoctaSpacing.md))
+        Column {
+            Text(
+                text = "Sleep Score",
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextSecondary
+            )
+            Text(
+                text = breakdown.label,
+                style = NoctaTypography.titleMedium,
+                color = NoctaTextPrimary,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun StandardScoreContent(breakdown: SleepScoreBreakdown, animatedScore: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
@@ -83,6 +139,96 @@ fun SleepScoreCard(
             ScoreFactorPip("Timing", breakdown.timingScore)
             ScoreFactorPip("Recovery", breakdown.qualityScore)
             ScoreFactorPip("Routine", breakdown.routineScore)
+        }
+    }
+}
+
+@Composable
+private fun ExpandedScoreContent(breakdown: SleepScoreBreakdown, animatedScore: Int) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        StandardScoreContent(breakdown, animatedScore)
+
+        Spacer(Modifier.height(NoctaSpacing.lg))
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(NoctaSpacing.sm)
+        ) {
+            ScoreFactorRow("Duration", breakdown.durationScore)
+            ScoreFactorRow("Consistency", breakdown.consistencyScore)
+            ScoreFactorRow("Timing", breakdown.timingScore)
+            ScoreFactorRow("Recovery", breakdown.qualityScore)
+            ScoreFactorRow("Routine", breakdown.routineScore)
+        }
+
+        Spacer(Modifier.height(NoctaSpacing.md))
+
+        Text(
+            text = "A wellness score from your last 14 nights and your morning " +
+                "check-in. It isn't a medical assessment.",
+            style = NoctaTypography.bodySmall,
+            color = NoctaTextTertiary
+        )
+    }
+}
+
+/** A single factor with its 0–100 value and a thin progress bar. */
+@Composable
+private fun ScoreFactorRow(label: String, value: Int) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = label,
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextSecondary,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$value",
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextPrimary
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(50))
+                .background(NoctaSurface)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = (value.coerceIn(0, 100) / 100f))
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(50))
+                    .background(scoreColor(value))
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScoreCardModeSelector(
+    current: SleepScoreCardMode,
+    onModeChange: (SleepScoreCardMode) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        SleepScoreCardMode.entries.forEach { candidate ->
+            val selected = candidate == current
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (selected) NoctaAccentMuted else androidx.compose.ui.graphics.Color.Transparent)
+                    .clickable { onModeChange(candidate) }
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = candidate.displayLabel,
+                    style = NoctaTypography.labelSmall,
+                    color = if (selected) NoctaAccent else NoctaTextTertiary
+                )
+            }
         }
     }
 }

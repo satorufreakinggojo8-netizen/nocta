@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -187,10 +189,12 @@ private fun CoachHeader(expression: CompanionExpression) {
                         painter = painterResource(id = imageRes),
                         contentDescription = "Nocta AI Coach",
                         contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
                             .border(2.dp, Color(0xFF7C3AED), CircleShape)
+                            .faceFocused(HeaderFramings[imageRes] ?: PortraitFraming)
                     )
                 }
             }
@@ -258,10 +262,12 @@ private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
                 painter = painterResource(id = R.drawable.coach_avatar_portrait),
                 contentDescription = "Vela Portrait",
                 contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
                 modifier = Modifier
                     .size(96.dp)
                     .clip(CircleShape)
                     .border(2.dp, Color(0xFFA78BFA), CircleShape)
+                    .faceFocused(PortraitFraming)
             )
         }
 
@@ -391,3 +397,67 @@ private fun CoachInputBar(
         }
     }
 }
+
+/**
+ * Per-asset framing for the circular coach avatars.
+ *
+ * The expression artwork is a tall, full-body composition, so a plain
+ * centered circular crop cuts the head off entirely. Each asset records where
+ * the face sits (focusX / focusY as fractions of the source image) and how
+ * much to zoom, so the circular avatar frames a natural head-and-shoulders
+ * portrait without stretching or distorting the artwork.
+ */
+private class AvatarFraming(
+    val sourceWidth: Int,
+    val sourceHeight: Int,
+    val focusX: Float,
+    val focusY: Float,
+    val zoom: Float
+)
+
+private val HeaderFramings = mapOf(
+    R.drawable.coach_avatar_idle to
+        AvatarFraming(sourceWidth = 736, sourceHeight = 1280, focusX = 0.49f, focusY = 0.129f, zoom = 1.5f),
+    R.drawable.coach_avatar_thinking to
+        AvatarFraming(sourceWidth = 736, sourceHeight = 1635, focusX = 0.48f, focusY = 0.125f, zoom = 1.8f),
+    R.drawable.coach_avatar_responding to
+        AvatarFraming(sourceWidth = 736, sourceHeight = 1256, focusX = 0.48f, focusY = 0.223f, zoom = 1.15f)
+)
+
+private val PortraitFraming =
+    AvatarFraming(sourceWidth = 736, sourceHeight = 736, focusX = 0.48f, focusY = 0.353f, zoom = 1.4f)
+
+/**
+ * Slides and zooms the ContentScale.Crop window so the face lands in the
+ * middle of the circle. Must be applied *inside* a [androidx.compose.ui.draw.clip]
+ * so the circular mask itself stays fixed while only the artwork moves.
+ */
+private fun Modifier.faceFocused(framing: AvatarFraming): Modifier =
+    graphicsLayer {
+        // Same scale ContentScale.Crop uses for a square target: width-limited
+        // for the tall assets, exact for the square portrait.
+        val cropScale = maxOf(
+            size.width / framing.sourceWidth,
+            size.height / framing.sourceHeight
+        )
+        val scaledHeight = framing.sourceHeight * cropScale
+        val focusXPx = framing.focusX * framing.sourceWidth * cropScale
+        val focusYPx = framing.focusY * scaledHeight
+
+        // The crop window starts at the top of the artwork (TopCenter). Zooming
+        // pushes part of the head above the window, so shift the crop down to
+        // center the face — but never past the artwork's bottom edge, which
+        // would expose empty space.
+        val windowHeight = size.height / framing.zoom
+        val desiredTop = (focusYPx - windowHeight / 2f)
+            .coerceIn(0f, (scaledHeight - windowHeight).coerceAtLeast(0f))
+
+        transformOrigin = TransformOrigin(
+            focusXPx / size.width.coerceAtLeast(0.01f),
+            focusYPx / size.height.coerceAtLeast(0.01f)
+        )
+        scaleX = framing.zoom
+        scaleY = framing.zoom
+        translationX = (size.width / 2f) - focusXPx
+        translationY = -focusYPx - (desiredTop - focusYPx) * framing.zoom
+    }

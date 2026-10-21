@@ -18,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -63,7 +64,9 @@ class SleepViewModel @Inject constructor(
             combine(
                 trackingRepository.observeActive(),
                 trackingRepository.observeLatestCompleted(),
-                sleepRepository.observeRecentSessions(days = 365),
+                // Three-year window so the sleep-history calendar can navigate
+                // back through past seasons (see docs/03-SCREENS.md, Sleep History).
+                sleepRepository.observeRecentSessions(days = HISTORY_WINDOW_DAYS),
                 now
             ) { active, completed, history, tick ->
 
@@ -83,10 +86,22 @@ class SleepViewModel @Inject constructor(
                     showMorningCheckIn = completed != null && checkIn == null,
                     message = _uiState.value.message
                 )
+            }.catch { _ ->
+                // A history read failure must not crash the Tracker: surface a
+                // calm, actionable message instead (error handling for the
+                // calendar's loading path).
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    message = "Couldn't load your sleep history. Please try again."
+                )
             }.collect { newState ->
                 _uiState.value = newState
             }
         }
+    }
+
+    private companion object {
+        const val HISTORY_WINDOW_DAYS = 3 * 365
     }
 
     fun startTracking() {

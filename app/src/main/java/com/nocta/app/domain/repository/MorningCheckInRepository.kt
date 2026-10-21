@@ -17,4 +17,7 @@ interface MorningCheckInRepository {
         trackingSessionId: String,
         checkIn: MorningCheckIn
     )
+
+    /** Permanently removes all locally stored morning check-ins. */
+    suspend fun deleteAllCheckIns()
 }

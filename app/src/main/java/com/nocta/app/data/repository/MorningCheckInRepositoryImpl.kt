@@ -40,6 +40,10 @@ class MorningCheckInRepositoryImpl @Inject constructor(
             )
         )
     }
+
+    override suspend fun deleteAllCheckIns() {
+        dao.deleteAll()
+    }
 }
 
 private fun MorningCheckInEntity.toDomain() =

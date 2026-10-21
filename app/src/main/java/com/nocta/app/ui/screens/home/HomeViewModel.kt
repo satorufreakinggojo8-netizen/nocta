@@ -3,7 +3,9 @@ package com.nocta.app.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nocta.app.domain.model.*
+import com.nocta.app.domain.profile.SleepProfile
 import com.nocta.app.domain.repository.SettingsRepository
+import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +29,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
     private val settingsRepository: SettingsRepository,
+    private val sleepProfileRepository: SleepProfileRepository,
     private val calculateSleepScore: CalculateSleepScore
 ) : ViewModel() {
 
@@ -37,9 +40,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 sleepRepository.observeLastNight(),
-                sleepRepository.observeRecentSessions(days = 14)
-            ) { lastNight, recent ->
-                val breakdown = calculateSleepScore(recent)
+                sleepRepository.observeRecentSessions(days = 14),
+                sleepProfileRepository.observeProfile()
+            ) { lastNight, recent, profile ->
+                // Score against the user's saved profile age when one exists;
+                // fall back to the documented default until they set it
+                // (see NOCTA_CLAUDE_CODE_INSTRUCTIONS §9 — no hard-coded
+                // profile when a saved one exists).
+                val effectiveProfile = profile ?: SleepProfile(age = DEFAULT_PROFILE_AGE)
+                val breakdown = calculateSleepScore(recent, effectiveProfile)
                 HomeUiState(
                     isLoading = false,
                     lastNight = lastNight,
@@ -62,6 +71,10 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.setSleepScoreCardMode(mode)
         }
+    }
+
+    private companion object {
+        const val DEFAULT_PROFILE_AGE = 18
     }
 
     private fun estimateSleepDebt(recent: List<SleepSession>): SleepDebt {

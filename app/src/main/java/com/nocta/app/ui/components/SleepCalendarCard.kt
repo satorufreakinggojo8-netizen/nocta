@@ -51,7 +51,8 @@ import java.util.Locale
 fun SleepCalendarCard(
     sessions: List<SleepSession>,
     isLoading: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenSessionDetail: ((SleepSession) -> Unit)? = null
 ) {
     var periodName by rememberSaveable {
         mutableStateOf(CalendarPeriod.MONTH.name)
@@ -194,7 +195,8 @@ fun SleepCalendarCard(
             SelectedDayDetail(
                 date = selectedDate,
                 session = sessionsByDate[selectedDate],
-                classifier = classifier
+                classifier = classifier,
+                onOpenDetail = onOpenSessionDetail
             )
         }
     }
@@ -469,7 +471,8 @@ private fun QualityLegend() {
 private fun SelectedDayDetail(
     date: LocalDate,
     session: SleepSession?,
-    classifier: SleepQualityClassifier
+    classifier: SleepQualityClassifier,
+    onOpenDetail: ((SleepSession) -> Unit)? = null
 ) {
     Column {
         Box(
@@ -509,6 +512,18 @@ private fun SelectedDayDetail(
                 style = NoctaTypography.labelSmall,
                 color = NoctaTextTertiary
             )
+            if (onOpenDetail != null) {
+                Spacer(Modifier.height(NoctaSpacing.xs))
+                Text(
+                    text = "View full night report →",
+                    style = NoctaTypography.labelSmall,
+                    color = NoctaAccent,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onOpenDetail(session) }
+                        .padding(vertical = 4.dp, horizontal = 2.dp)
+                )
+            }
         }
     }
 }

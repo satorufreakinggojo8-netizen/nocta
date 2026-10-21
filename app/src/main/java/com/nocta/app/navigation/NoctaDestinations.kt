@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Nightlight
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -11,12 +12,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 sealed class NoctaDestination(val route: String, val label: String, val icon: ImageVector) {
     data object Home : NoctaDestination("home", "Home", Icons.Outlined.Home)
     data object Sleep : NoctaDestination("sleep", "Sleep", Icons.Outlined.Bedtime)
+    data object Optimize : NoctaDestination("optimize", "Optimize", Icons.Outlined.Nightlight)
     data object Coach : NoctaDestination("coach", "Coach", Icons.Outlined.SmartToy)
     data object Insights : NoctaDestination("insights", "Insights", Icons.Outlined.Insights)
     data object Profile : NoctaDestination("profile", "Profile", Icons.Outlined.Person)
 
     companion object {
-        val bottomNavItems = listOf(Home, Sleep, Coach, Insights, Profile)
+        val bottomNavItems = listOf(Home, Sleep, Optimize, Coach, Insights, Profile)
     }
 }
 

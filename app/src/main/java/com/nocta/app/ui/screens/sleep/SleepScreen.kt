@@ -48,6 +48,7 @@ private val TIME_FMT: DateTimeFormatter =
 
 @Composable
 fun SleepScreen(
+    onOpenSleepDetails: (String) -> Unit = {},
     viewModel: SleepViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -118,6 +119,7 @@ fun SleepScreen(
                 SleepCalendarCard(
                     sessions = state.historySessions,
                     isLoading = state.isLoading,
+                    onOpenSessionDetail = { session -> onOpenSleepDetails(session.id) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

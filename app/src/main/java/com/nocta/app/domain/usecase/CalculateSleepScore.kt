@@ -3,10 +3,7 @@ package com.nocta.app.domain.usecase
 import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepSession
 import com.nocta.app.domain.profile.SleepProfile
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.sin
 
 /**
  * Calculates a transparent, non-medical score from recent sleep logs.
@@ -74,13 +71,7 @@ class CalculateSleepScore(
             val time = timeOf(session)
             time.hour * 60.0 + time.minute
         }
-        val angle = minutes.map { it / MINUTES_PER_DAY * 2.0 * Math.PI }
-        val meanAngle = atan2(angle.sumOf(::sin), angle.sumOf(::cos))
-        val meanMinutes = ((meanAngle / (2.0 * Math.PI) * MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY
-        val meanAbsoluteDeviation = minutes.map { value ->
-            val direct = kotlin.math.abs(value - meanMinutes)
-            minOf(direct, MINUTES_PER_DAY - direct)
-        }.average()
+        val meanAbsoluteDeviation = CircularClockStats.meanAbsoluteDeviation(minutes)
         return (100.0 - max(0.0, meanAbsoluteDeviation - CONSISTENCY_GRACE_MINUTES) *
             CONSISTENCY_PENALTY_PER_MINUTE).toInt().coerceIn(0, 100)
     }
@@ -112,7 +103,6 @@ class CalculateSleepScore(
         const val MAX_VALID_SLEEP_MINUTES = 20L * 60L
         const val MIN_NIGHTS_FOR_PATTERN = 3
         const val INSUFFICIENT_HISTORY_SCORE = 70
-        const val MINUTES_PER_DAY = 24.0 * 60.0
         const val CONSISTENCY_GRACE_MINUTES = 15.0
         const val CONSISTENCY_PENALTY_PER_MINUTE = 0.5
     }

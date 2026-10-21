@@ -28,3 +28,5 @@ val NoctaScoreExcellent = NoctaAccent
 val NoctaScoreGood = Color(0xFF8FD6C4)
 val NoctaScoreFair = NoctaWarning
 val NoctaScorePoor = NoctaAlert
+// Fifth, lower band used only by the five-level sleep-quality calendar
+val NoctaScoreVeryPoor = Color(0xFF9E5A54)

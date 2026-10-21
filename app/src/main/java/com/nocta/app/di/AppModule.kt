@@ -10,10 +10,12 @@ import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.data.repository.AiCoachRepositoryImpl
 import com.nocta.app.data.repository.MorningCheckInRepositoryImpl
 import com.nocta.app.data.repository.SleepProfileRepositoryImpl
+import com.nocta.app.data.repository.SettingsRepositoryImpl
 import com.nocta.app.data.repository.SleepRepositoryImpl
 import com.nocta.app.data.repository.SleepTrackingRepositoryImpl
 import com.nocta.app.domain.repository.AiCoachRepository
 import com.nocta.app.domain.repository.MorningCheckInRepository
+import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.repository.SleepTrackingRepository
@@ -144,4 +146,9 @@ abstract class RepositoryModule {
     abstract fun bindSleepProfileRepository(
         impl: SleepProfileRepositoryImpl
     ): SleepProfileRepository
+
+    @Binds
+    abstract fun bindSettingsRepository(
+        impl: SettingsRepositoryImpl
+    ): SettingsRepository
 }

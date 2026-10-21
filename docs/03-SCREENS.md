@@ -12,7 +12,7 @@ screen or data path does not prove a configured backend or device integration.
 | 5 | Home                | ✅ | Full: score, last night, recommendation, debt, quick actions |
 | 6 | Sleep Details       | ✅ | Night details plus the shared score over up to 14 recent nights |
 | 7 | Log Sleep           | ✅ | Manual local sleep log and check-in |
-| 8 | Sleep History       | ✅ | Three-year calendar and recent night list in Insights |
+| 8 | Sleep History       | ✅ | Week/month/year quality calendar under Tracker, backed by Room `sleep_sessions` |
 | 9 | Sleep Optimization  | ◐ | Rule-based daily recommendation on Home |
 | 10 | Wind-Down Mode      | ✅ | Guidance and on-screen breathing timer |
 | 11 | AI Coach (landing)  | ✅ | Suggested prompts grid |

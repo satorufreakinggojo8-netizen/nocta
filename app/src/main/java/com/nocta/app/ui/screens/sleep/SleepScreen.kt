@@ -30,6 +30,7 @@ import com.nocta.app.domain.model.SleepDisturbance
 import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepTrackingSession
 import com.nocta.app.ui.components.MetricCard
+import com.nocta.app.ui.components.SleepCalendarCard
 import com.nocta.app.ui.theme.NoctaBackground
 import com.nocta.app.ui.theme.NoctaShapes
 import com.nocta.app.ui.theme.NoctaSpacing
@@ -101,6 +102,24 @@ fun SleepScreen(
         state.sleepScore?.let { score ->
             item {
                 SleepScoreSection(score)
+            }
+        }
+
+        item {
+            Column {
+                Text(
+                    "Sleep history",
+                    style = NoctaTypography.titleMedium,
+                    color = NoctaTextPrimary,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = NoctaSpacing.sm)
+                )
+
+                SleepCalendarCard(
+                    sessions = state.historySessions,
+                    isLoading = state.isLoading,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 

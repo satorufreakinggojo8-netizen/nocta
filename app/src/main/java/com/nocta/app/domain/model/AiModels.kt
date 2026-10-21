@@ -23,8 +23,9 @@ data class AiConversation(
 data class SuggestedPrompt(val label: String, val prompt: String)
 
 val defaultSuggestedPrompts = listOf(
-    SuggestedPrompt("Analyze my sleep", "Analyze my recent sleep and tell me what stands out."),
-    SuggestedPrompt("Optimize tonight", "What's the single best thing I can change tonight?"),
-    SuggestedPrompt("Build my routine", "Build me a wind-down routine based on my habits."),
-    SuggestedPrompt("Why am I tired?", "Why might I be feeling tired today?")
+    SuggestedPrompt("Analyze my last night", "Analyze my last night's sleep and tell me what stands out."),
+    SuggestedPrompt("Explain my score", "Explain my sleep score factor by factor in plain language."),
+    SuggestedPrompt("Build my bedtime routine", "Build me a bedtime routine based on my recorded habits."),
+    SuggestedPrompt("Review my week", "Give me a weekly review of my sleep trends — only what my records support."),
+    SuggestedPrompt("Fix my schedule", "Help me improve my schedule consistency. What should I change first?")
 )

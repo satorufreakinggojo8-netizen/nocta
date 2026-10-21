@@ -11,8 +11,14 @@ import java.time.Instant
 interface SleepRepository {
     fun observeLastNight(): Flow<SleepSession?>
     fun observeRecentSessions(days: Int): Flow<List<SleepSession>>
+    /** A single saved night, for the detailed report screen. */
+    fun observeSession(id: String): Flow<SleepSession?>
     suspend fun logSession(session: SleepSession)
     suspend fun syncPending()
+    /** Every saved night, oldest first — used by data export. */
+    suspend fun getAllSessions(): List<SleepSession>
+    /** Permanently removes all locally stored sleep data. */
+    suspend fun deleteAllSleepData()
 }
 
 // Tracking is stored separately from the normalized nightly sleep log.
@@ -22,6 +28,8 @@ interface SleepTrackingRepository {
     suspend fun start(startedAt: Instant): SleepTrackingSession
     suspend fun end(endedAt: Instant): SleepTrackingSession
     suspend fun discardActive()
+    /** Permanently removes all locally stored tracking sessions. */
+    suspend fun deleteAllTrackingData()
 }
 
 interface AiCoachRepository {
@@ -30,4 +38,6 @@ interface AiCoachRepository {
     fun observeMostRecentConversationId(): Flow<String?>
     fun ask(conversationId: String?, message: String): Flow<AiMessage>
     fun observeConversation(conversationId: String): Flow<List<AiMessage>>
+    /** Permanently removes all locally stored coach messages. */
+    suspend fun deleteAllMessages()
 }

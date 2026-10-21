@@ -10,20 +10,20 @@ screen or data path does not prove a configured backend or device integration.
 | 3 | Onboarding          | ☐ | |
 | 4 | Sleep Profile        | ◐ | Age-based duration targets are editable in Profile |
 | 5 | Home                | ✅ | Full: score, last night, recommendation, debt, quick actions |
-| 6 | Sleep Details       | ✅ | Night details plus the shared score over up to 14 recent nights |
-| 7 | Log Sleep           | ✅ | Manual local sleep log and check-in |
-| 8 | Sleep History       | ✅ | Week/month/year quality calendar under Tracker, backed by Room `sleep_sessions` |
-| 9 | Sleep Optimization  | ◐ | Rule-based daily recommendation on Home |
-| 10 | Wind-Down Mode      | ✅ | Guidance and on-screen breathing timer |
-| 11 | AI Coach (landing)  | ✅ | Suggested prompts grid |
+| 6 | Sleep Details       | ✅ | `sleep_details/{id}`: report from Room — factors, baseline delta, check-in, missing-data notes |
+| 7 | Log Sleep           | ✅ | Manual entry with validation; saves as `SELF_REPORTED` |
+| 8 | Sleep History       | ✅ | Week/month/year quality calendar under Tracker, backed by Room `sleep_sessions`; day tap opens full report |
+| 9 | Sleep Optimization  | ✅ | Optimize tab: `PlanBedtime` from real history + editable wind-down routine |
+| 10 | Wind-Down Mode      | ✅ | Deep-link to Optimize's routine checklist |
+| 11 | AI Coach (landing)  | ✅ | 5 starter actions; context computed from stored records |
 | 12 | AI Conversation     | ✅ | Full streaming chat implementation |
-| 13 | Insights            | ✅ | Score/duration charts and daytime recovery logs |
-| 14 | Weekly Report       | ☐ | |
+| 13 | Insights            | ✅ | 7/30/90-day trends, duration chart, streaks, score distribution (Room only) |
+| 14 | Weekly Report       | ◐ | Via Vela `Review my week` starter action; no dedicated screen |
 | 15 | Goals               | ☐ | |
-| 16 | Notifications       | ◐ | Configurable wake window notification and guide |
-| 17 | Profile             | ✅ | Profile editing, wake alarm preferences, reset |
+| 16 | Notifications       | ☐ | Not implemented — see docs/04-TRACKING-ALARMS-AUDIT.md §5 |
+| 17 | Profile             | ✅ | Age target, wake time, card mode |
 | 18 | Settings            | ◐ | Integrated into Profile |
-| 19 | Privacy             | ☐ | |
-| 20 | Health Connect      | ☐ | Dependency present only; no data synced |
+| 19 | Privacy             | ✅ | Data-flow explanation + JSON export + delete controls in Profile |
+| 20 | Health Connect      | ☐ | Dependency only; audit + constraints in docs/04-TRACKING-ALARMS-AUDIT.md |
 
 A local screen or data path does not prove a configured backend or device integration.

@@ -119,4 +119,8 @@ class AiCoachRepositoryImpl @Inject constructor(
                 )
             }
         }
+
+    override suspend fun deleteAllMessages() {
+        aiMessageDao.deleteAll()
+    }
 }

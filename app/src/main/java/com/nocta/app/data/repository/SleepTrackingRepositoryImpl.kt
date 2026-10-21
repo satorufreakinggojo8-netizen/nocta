@@ -63,6 +63,10 @@ class SleepTrackingRepositoryImpl @Inject constructor(
     override suspend fun discardActive() {
         dao.getActive()?.let { dao.delete(it.id) }
     }
+
+    override suspend fun deleteAllTrackingData() {
+        dao.deleteAll()
+    }
 }
 
 private fun SleepTrackingSessionEntity.toDomain() = SleepTrackingSession(

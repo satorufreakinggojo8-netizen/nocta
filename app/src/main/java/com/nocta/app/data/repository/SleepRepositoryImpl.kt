@@ -30,6 +30,16 @@ class SleepRepositoryImpl @Inject constructor(
         return sleepDao.observeSince(since).map { list -> list.map { it.toDomain() } }
     }
 
+    override fun observeSession(id: String): Flow<SleepSession?> =
+        sleepDao.observeById(id).map { it?.toDomain() }
+
+    override suspend fun getAllSessions(): List<SleepSession> =
+        sleepDao.getAllForExport().map { it.toDomain() }
+
+    override suspend fun deleteAllSleepData() {
+        sleepDao.deleteAll()
+    }
+
     override suspend fun logSession(session: SleepSession) {
         // Write locally first (offline-first) — sync happens in syncPending().
         sleepDao.upsert(session.toEntity())
@@ -58,6 +68,7 @@ private fun SleepSessionEntity.toDomain() = SleepSession(
     nightAwakenings = nightAwakenings,
     sleepQuality = sleepQuality,
     morningEnergy = morningEnergy,
+    awakeMinutes = awakeMinutes,
     source = DataSource.valueOf(source)
 )
 
@@ -71,6 +82,7 @@ private fun SleepSession.toEntity() = SleepSessionEntity(
     nightAwakenings = nightAwakenings,
     sleepQuality = sleepQuality,
     morningEnergy = morningEnergy,
+    awakeMinutes = awakeMinutes,
     source = source.name,
     synced = false
 )

@@ -21,4 +21,10 @@ interface MorningCheckInDao {
     suspend fun getForSession(
         trackingSessionId: String
     ): MorningCheckInEntity?
+
+    @Query("DELETE FROM morning_check_ins")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM morning_check_ins ORDER BY trackingSessionId ASC")
+    suspend fun getAllForExport(): List<MorningCheckInEntity>
 }

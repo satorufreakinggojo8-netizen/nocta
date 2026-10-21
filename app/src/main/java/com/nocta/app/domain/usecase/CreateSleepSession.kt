@@ -36,7 +36,10 @@ class CreateSleepSession @Inject constructor() {
             nightAwakenings = checkIn.nightAwakenings,
             sleepQuality = checkIn.sleepQuality,
             morningEnergy = checkIn.morningEnergy,
-            source = DataSource.SELF_REPORTED
+            source = DataSource.SELF_REPORTED,
+            // Carry self-reported awake time through so duration reflects
+            // estimated time asleep, not time in bed (Section 4).
+            awakeMinutes = checkIn.awakeMinutes
         )
     }
 }

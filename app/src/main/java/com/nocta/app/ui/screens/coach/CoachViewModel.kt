@@ -7,6 +7,7 @@ import com.nocta.app.domain.model.MessageRole
 import com.nocta.app.domain.repository.AiCoachRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
+import com.nocta.app.domain.usecase.CalculateSleepScore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,14 +29,21 @@ data class CoachUiState(
     val userAge: Int? = null,
     val targetSleepHours: Double? = null,
     val lastNightDurationHours: Double? = null,
-    val lastUserMessageText: String? = null
+    val lastUserMessageText: String? = null,
+    /** Real, computed sleep context sent with every message — never invented. */
+    val scoreOverall: Int? = null,
+    val scoreLabel: String? = null,
+    val weakestFactor: String? = null,
+    val sevenDayAvgHours: Double? = null,
+    val trackedNightsLast14: Int = 0
 )
 
 @HiltViewModel
 class CoachViewModel @Inject constructor(
     private val aiCoachRepository: AiCoachRepository,
     private val sleepProfileRepository: SleepProfileRepository,
-    private val sleepRepository: SleepRepository
+    private val sleepRepository: SleepRepository,
+    private val calculateSleepScore: CalculateSleepScore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoachUiState())
@@ -77,10 +85,41 @@ class CoachViewModel @Inject constructor(
             sleepRepository.observeLastNight().collect { lastSession ->
                 if (lastSession != null) {
                     val durationHours = lastSession.durationMinutes / 60.0
-                    _uiState.value = _uiState.value.copy(
-                        lastNightDurationHours = durationHours
-                    )
+                    _uiState.value = _uiState.value.copy(lastNightDurationHours = durationHours)
                 }
+            }
+        }
+        viewModelScope.launch {
+            // Real score context so Vela explains the user's actual numbers
+            // instead of guessing. Insufficient history stays null — the
+            // context block then says so rather than fabricating a score.
+            sleepRepository.observeRecentSessions(days = 14).collect { recent ->
+                if (recent.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        scoreOverall = null,
+                        scoreLabel = null,
+                        weakestFactor = null,
+                        sevenDayAvgHours = null,
+                        trackedNightsLast14 = 0
+                    )
+                    return@collect
+                }
+                val breakdown = calculateSleepScore(recent)
+                val weakest = listOf(
+                    "duration" to breakdown.durationScore,
+                    "schedule consistency" to breakdown.consistencyScore,
+                    "sleep quality" to breakdown.qualityScore,
+                    "schedule timing" to breakdown.timingScore,
+                    "night awakenings" to breakdown.routineScore
+                ).minByOrNull { it.second }?.first
+                val last7 = recent.take(7)
+                _uiState.value = _uiState.value.copy(
+                    scoreOverall = breakdown.overall,
+                    scoreLabel = breakdown.label,
+                    weakestFactor = weakest,
+                    sevenDayAvgHours = last7.map { it.durationMinutes }.average() / 60.0,
+                    trackedNightsLast14 = recent.size
+                )
             }
         }
     }
@@ -115,11 +154,21 @@ class CoachViewModel @Inject constructor(
             conversationId = conversationId
         )
 
-        // Enrich text with available sleep context if present
+        // Real context only: every line below is computed from stored records.
+        // With no history at all the block is empty and Vela must say data is
+        // missing rather than inventing numbers (backend prompt enforces this).
         val contextInfo = buildList {
             currentState.userAge?.let { add("User Age: $it") }
             currentState.targetSleepHours?.let { add("Target Sleep Goal: ${"%.1f".format(it)} hrs") }
             currentState.lastNightDurationHours?.let { add("Last Night Sleep: ${"%.1f".format(it)} hrs") }
+            currentState.scoreOverall?.let { overall ->
+                add("Sleep Score (14-night window): $overall (${currentState.scoreLabel})")
+                currentState.weakestFactor?.let { add("Weakest factor: $it") }
+            }
+            currentState.sevenDayAvgHours?.let { add("7-day average sleep: ${"%.1f".format(it)} hrs") }
+            if (currentState.trackedNightsLast14 > 0) {
+                add("Tracked nights in window: ${currentState.trackedNightsLast14}/14 — treat thin history cautiously")
+            }
         }
 
         val enrichedText = if (contextInfo.isNotEmpty()) {

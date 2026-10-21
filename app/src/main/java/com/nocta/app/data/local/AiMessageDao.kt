@@ -16,4 +16,7 @@ interface AiMessageDao {
 
     @Insert
     suspend fun insert(message: AiMessageEntity)
+
+    @Query("DELETE FROM ai_messages")
+    suspend fun deleteAll()
 }

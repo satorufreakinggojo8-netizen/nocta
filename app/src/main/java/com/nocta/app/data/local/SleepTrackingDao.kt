@@ -38,6 +38,9 @@ interface SleepTrackingDao {
     @Query("UPDATE sleep_tracking_sessions SET endedAtEpochMillis = :endedAtEpochMillis WHERE id = :id")
     suspend fun endSession(id: String, endedAtEpochMillis: Long)
 
+    @Query("DELETE FROM sleep_tracking_sessions")
+    suspend fun deleteAll()
+
     @Query("DELETE FROM sleep_tracking_sessions WHERE id = :id")
     suspend fun delete(id: String)
 }

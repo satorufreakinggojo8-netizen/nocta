@@ -30,14 +30,14 @@ sealed class NoctaDestination(val route: String, val label: String, val icon: Im
 }
 
 /**
- * The six primary destinations, in bar order: Home, Sleep, Optimize, Coach,
- * Insights, Profile.
+ * The six primary destinations, in bar order: Home, Sleep, Coach, Optimize,
+ * Insights, Profile — the coach sits next to sleep, and Optimize follows it.
  */
 val bottomNavDestinations: List<NoctaDestination> = listOf(
     NoctaDestination.Home,
     NoctaDestination.Sleep,
-    NoctaDestination.Optimize,
     NoctaDestination.Coach,
+    NoctaDestination.Optimize,
     NoctaDestination.Insights,
     NoctaDestination.Profile
 )
@@ -52,5 +52,6 @@ object NoctaRoutes {
     const val SLEEP_DETAILS = "sleep_details/{sessionId}"
     const val AI_CONVERSATION = "ai_conversation/{conversationId}"
     const val WIND_DOWN = "wind_down"
+    const val JOURNAL = "journal"
     const val SETTINGS = "settings"
 }

@@ -190,7 +190,7 @@ fun ProfileScreen(
                 Spacer(Modifier.height(NoctaSpacing.sm))
                 Text(
                     "Where your data lives:\n" +
-                        "• Sleep records, check-ins, and coach conversations are stored on this device (Room database).\n" +
+                        "• Sleep records, check-ins, journal entries, routine runs, and coach conversations are stored on this device (Room database).\n" +
                         "• Display and schedule settings are stored on this device (SharedPreferences).\n" +
                         "• Sleep sessions are sent to your own backend server only to sync your account, when a backend is configured. The app itself contains no API keys — server credentials stay server-side.\n" +
                         "• No audio, microphone, or sensor data is collected. Nothing is shared with third parties.",
@@ -204,8 +204,15 @@ fun ProfileScreen(
                     onClick = viewModel::exportData,
                     enabled = !state.exporting,
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (state.exporting) "Preparing export…" else "Export my data (JSON)")
+                ) {                Text(
+                    if (state.exporting) "Preparing export…" else "Export my data (JSON)"
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Includes nights, check-ins, journal entries, routine history, and your schedule settings.",
+                    style = NoctaTypography.labelSmall,
+                    color = NoctaTextTertiary
+                )
                 }
 
                 Spacer(Modifier.height(NoctaSpacing.sm))
@@ -228,8 +235,9 @@ fun ProfileScreen(
 
                 Spacer(Modifier.height(NoctaSpacing.sm))
                 Text(
-                    "Deletion is permanent and applies to this device. " +
-                        "Backend copies are removed on the next sync if your server supports it.",
+                    "Deletion is permanent and applies to this device. This build has no " +
+                        "deletion endpoint on the server, so any copy your backend already received " +
+                        "must be removed there separately.",
                     style = NoctaTypography.labelSmall,
                     color = NoctaTextTertiary
                 )
@@ -255,8 +263,9 @@ fun ProfileScreen(
             text = {
                 Text(
                     "This permanently removes every sleep record, tracking session, " +
-                        "and morning check-in stored on this device. This cannot be undone. " +
-                        "Export your data first if you want to keep a copy."
+                        "morning check-in, journal entry, and routine run stored on this device. " +
+                        "Coach conversations are deleted separately. This cannot be undone — " +
+                        "export your data first if you want to keep a copy."
                 )
             },
             confirmButton = {

@@ -17,6 +17,7 @@ import com.nocta.app.ui.screens.coach.CoachScreen
 import com.nocta.app.ui.screens.details.SleepDetailScreen
 import com.nocta.app.ui.screens.home.HomeScreen
 import com.nocta.app.ui.screens.insights.InsightsScreen
+import com.nocta.app.ui.screens.journal.JournalScreen
 import com.nocta.app.ui.screens.log.LogSleepScreen
 import com.nocta.app.ui.screens.optimize.OptimizeScreen
 import com.nocta.app.ui.screens.profile.ProfileScreen
@@ -74,8 +75,12 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
                             NoctaRoutes.SLEEP_DETAILS.replace("{sessionId}", sessionId)
                         )
                     },
-                    onLogSleep = { navController.navigate(NoctaRoutes.LOG_SLEEP) }
+                    onLogSleep = { navController.navigate(NoctaRoutes.LOG_SLEEP) },
+                    onOpenJournal = { navController.navigate(NoctaRoutes.JOURNAL) }
                 )
+            }
+            composable(NoctaRoutes.JOURNAL) {
+                JournalScreen(onBack = { navController.popBackStack() })
             }
             composable(NoctaDestination.Optimize.route) {
                 OptimizeScreen()

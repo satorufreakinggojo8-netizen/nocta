@@ -96,7 +96,10 @@ fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                EmptyCoachState(onPromptSelected = { viewModel.send(it) })
+                EmptyCoachState(
+                    state = uiState,
+                    onPromptSelected = { viewModel.send(it) }
+                )
             }
         } else {
             LazyColumn(
@@ -135,6 +138,18 @@ fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
                     )
                 }
             }
+        }
+
+        if (!uiState.backendConfigured) {
+            Text(
+                text = "No coach backend is configured in this build. Vela can't answer yet — " +
+                    "your sleep records and journal stay on this device.",
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextTertiary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = NoctaSpacing.md, vertical = NoctaSpacing.xs)
+            )
         }
 
         CoachInputBar(
@@ -205,7 +220,7 @@ private fun CoachHeader(expression: CompanionExpression) {
 }
 
 @Composable
-private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
+private fun EmptyCoachState(state: CoachUiState, onPromptSelected: (String) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -239,6 +254,38 @@ private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
             textAlign = TextAlign.Center
         )
 
+        Spacer(Modifier.height(NoctaSpacing.md))
+
+        // Exactly what Vela can see — and what she cannot — before the first message.
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(NoctaShapes.medium)
+                .background(NoctaSurface)
+                .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
+                .padding(NoctaSpacing.md)
+        ) {
+            Text(
+                text = "What I can see",
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextSecondary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = state.dataSummary ?: "Nothing logged yet — no nights, journal or routines.",
+                style = NoctaTypography.bodyMedium,
+                color = if (state.dataSummary != null) NoctaTextPrimary else NoctaTextTertiary
+            )
+            if (state.missingData.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = "Still missing: " + state.missingData.joinToString("; ") + ".",
+                    style = NoctaTypography.labelSmall,
+                    color = NoctaTextTertiary
+                )
+            }
+        }
+
         Spacer(Modifier.height(NoctaSpacing.lg))
 
         defaultSuggestedPrompts.forEach { prompt ->
@@ -264,7 +311,7 @@ private fun EmptyCoachState(onPromptSelected: (String) -> Unit) {
                     text = prompt.label,
                     style = NoctaTypography.bodyMedium,
                     color = NoctaTextPrimary,
-                    maxLines = 1
+                    maxLines = 2
                 )
             }
         }

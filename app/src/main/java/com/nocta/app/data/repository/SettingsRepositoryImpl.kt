@@ -1,6 +1,8 @@
 package com.nocta.app.data.repository
 
 import android.content.Context
+import com.nocta.app.domain.model.PlannerLimits
+import com.nocta.app.domain.model.SchedulePreset
 import com.nocta.app.domain.model.SleepScoreCardMode
 import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.WindDownStep
@@ -32,6 +34,10 @@ class SettingsRepositoryImpl @Inject constructor(
 
     private val windDownStepsFlow = MutableStateFlow(readWindDownSteps())
 
+    private val activePresetFlow = MutableStateFlow(readActivePreset())
+
+    private val windDownMinutesFlow = MutableStateFlow(readWindDownMinutes())
+
     override fun observeSleepScoreCardMode(): Flow<SleepScoreCardMode> =
         sleepScoreCardModeFlow.asStateFlow()
 
@@ -46,6 +52,39 @@ class SettingsRepositoryImpl @Inject constructor(
         prefs.edit().putInt(KEY_WAKE_TIME, time.toSecondOfDay()).apply()
         wakeTimeFlow.value = time
     }
+
+    override suspend fun getWakeTime(): LocalTime = wakeTimeFlow.value
+
+    override fun observeActivePreset(): Flow<SchedulePreset> =
+        activePresetFlow.asStateFlow()
+
+    override suspend fun setActivePreset(preset: SchedulePreset) {
+        prefs.edit().putString(KEY_ACTIVE_PRESET, preset.name).apply()
+        activePresetFlow.value = preset
+    }
+
+    override suspend fun getActivePreset(): SchedulePreset = activePresetFlow.value
+
+    override suspend fun getPresetWakeTime(preset: SchedulePreset): LocalTime? {
+        val stored = prefs.getInt(presetKey(preset), -1)
+        if (stored < 0) return null
+        return runCatching { LocalTime.ofSecondOfDay(stored.toLong()) }.getOrNull()
+    }
+
+    override suspend fun setPresetWakeTime(preset: SchedulePreset, time: LocalTime) {
+        prefs.edit().putInt(presetKey(preset), time.toSecondOfDay()).apply()
+    }
+
+    override fun observeWindDownMinutes(): Flow<Int> =
+        windDownMinutesFlow.asStateFlow()
+
+    override suspend fun setWindDownMinutes(minutes: Int) {
+        val clamped = PlannerLimits.clampWindDownMinutes(minutes)
+        prefs.edit().putInt(KEY_WIND_DOWN_MINUTES, clamped).apply()
+        windDownMinutesFlow.value = clamped
+    }
+
+    override suspend fun getWindDownMinutes(): Int = windDownMinutesFlow.value
 
     override fun observeWindDownSteps(): Flow<List<WindDownStep>> =
         windDownStepsFlow.asStateFlow()
@@ -62,6 +101,8 @@ class SettingsRepositoryImpl @Inject constructor(
         windDownStepsFlow.value = steps
     }
 
+    override suspend fun getWindDownSteps(): List<WindDownStep> = readWindDownSteps()
+
     private fun readSleepScoreCardMode(): SleepScoreCardMode {
         val stored = prefs.getString(KEY_SLEEP_SCORE_CARD_MODE, null)
         return SleepScoreCardMode.entries.firstOrNull { it.name == stored }
@@ -72,6 +113,17 @@ class SettingsRepositoryImpl @Inject constructor(
         val stored = prefs.getInt(KEY_WAKE_TIME, -1)
         return runCatching { LocalTime.ofSecondOfDay(stored.toLong()) }
             .getOrDefault(DEFAULT_WAKE_TIME)
+    }
+
+    private fun readActivePreset(): SchedulePreset {
+        val stored = prefs.getString(KEY_ACTIVE_PRESET, null)
+        return SchedulePreset.entries.firstOrNull { it.name == stored }
+            ?: SchedulePreset.CUSTOM
+    }
+
+    private fun readWindDownMinutes(): Int {
+        val stored = prefs.getInt(KEY_WIND_DOWN_MINUTES, PlannerLimits.DEFAULT_WIND_DOWN_MINUTES)
+        return PlannerLimits.clampWindDownMinutes(stored)
     }
 
     private fun readWindDownSteps(): List<WindDownStep> {
@@ -85,6 +137,8 @@ class SettingsRepositoryImpl @Inject constructor(
         }
         return parsed.ifEmpty { defaultWindDownSteps() }
     }
+
+    private fun presetKey(preset: SchedulePreset) = "$KEY_PRESET_WAKE_PREFIX${preset.name}"
 
     private fun defaultWindDownSteps() = listOf(
         WindDownStep("dim_lights", "Dim the lights", true),
@@ -100,6 +154,9 @@ class SettingsRepositoryImpl @Inject constructor(
         const val KEY_SLEEP_SCORE_CARD_MODE = "sleep_score_card_mode"
         const val KEY_WAKE_TIME = "wake_time_seconds"
         const val KEY_WIND_DOWN_STEPS = "wind_down_steps"
+        const val KEY_ACTIVE_PRESET = "active_schedule_preset"
+        const val KEY_PRESET_WAKE_PREFIX = "preset_wake_"
+        const val KEY_WIND_DOWN_MINUTES = "wind_down_minutes"
         const val RECORD_SEPARATOR = "\u001e"
         const val FIELD_SEPARATOR = "\u001f"
         val DEFAULT_WAKE_TIME: LocalTime = LocalTime.of(7, 0)

@@ -31,8 +31,28 @@ narrative version.
 - **UserSettings** — userId (1:1), notification toggles, AI settings (data
   sharing scope), theme preference, units.
 
-Prisma tables are backend storage; Android Room tables are a separate local
-cache and are defined in `app/src/main/java/com/nocta/app/data/local`.
+## Android Room (on-device) — version 5
+
+Defined in `app/src/main/java/com/nocta/app/data/local`; this is the only store
+for user data the app writes.
+
+| Table | Added | Purpose |
+|---|---|---|
+| `sleep_sessions` | v1 | Normalized night log (offline-first, `synced` flag) |
+| `ai_messages` | v1 | Vela conversation history |
+| `sleep_tracking_sessions` | v2 | Start/stop tracking; null `endedAtEpochMillis` = active |
+| `morning_check_ins` | v3 | Quality, awakenings, awake minutes, disturbance |
+| `user_profile` | v4 | Age (drives age-based targets) |
+| `journal_entries` | v5 | Optional daily journal, PK = sleep date epoch day, every answer nullable |
+| `wind_down_runs` | v5 | Routine runs with pause bookkeeping, outcome and ticked steps |
+
+v5 is purely additive (`MIGRATION_4_5`); no existing table is touched. A v4
+database keeps every sleep record, check-in and chat message. Journal fields are
+nullable on purpose: `null` means "not answered" and is distinct from `0`.
+Trends and coach context never impute an unanswered field.
+
+Prisma tables below are backend storage — they are described for completeness,
+but no backend deployment or migration is part of this repo's verified state.
 `SleepSession.awakeMinutes` was added to the Prisma model and API contract. A
 database migration must be generated, reviewed, and applied before deploying
 this backend change. No production database has been changed.

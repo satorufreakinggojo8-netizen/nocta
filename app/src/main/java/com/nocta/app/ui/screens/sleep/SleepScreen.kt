@@ -2,6 +2,7 @@ package com.nocta.app.ui.screens.sleep
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,6 +38,7 @@ import com.nocta.app.domain.model.SleepTrackingSession
 import com.nocta.app.ui.components.MetricCard
 import com.nocta.app.ui.components.SleepCalendarCard
 import com.nocta.app.ui.components.SleepScoreEmptyCard
+import com.nocta.app.ui.theme.NoctaAccent
 import com.nocta.app.ui.theme.NoctaAlert
 import com.nocta.app.ui.theme.NoctaBackground
 import com.nocta.app.ui.theme.NoctaShapes
@@ -91,6 +93,7 @@ private fun formatTrackedDuration(minutes: Long): String {
 fun SleepScreen(
     onOpenSleepDetails: (String) -> Unit = {},
     onLogSleep: () -> Unit = {},
+    onOpenJournal: () -> Unit = {},
     viewModel: SleepViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -151,6 +154,39 @@ fun SleepScreen(
                 SleepScoreSection(score)
             } else if (!state.isLoading) {
                 SleepScoreEmptyCard(onLogSleep = onLogSleep)
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(NoctaShapes.medium)
+                    .background(NoctaSurface)
+                    .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
+                    .clickable { onOpenJournal() }
+                    .padding(NoctaSpacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Sleep journal",
+                        style = NoctaTypography.titleMedium,
+                        color = NoctaTextPrimary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Caffeine, stress, naps, screens — optional notes that make patterns possible.",
+                        style = NoctaTypography.labelSmall,
+                        color = NoctaTextTertiary
+                    )
+                }
+                Text(
+                    "Open",
+                    style = NoctaTypography.labelSmall,
+                    color = NoctaAccent,
+                    maxLines = 1
+                )
             }
         }
 

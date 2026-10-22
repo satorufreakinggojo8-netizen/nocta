@@ -57,7 +57,8 @@ fun AIMessageBubble(
     onRetry: (() -> Unit)? = null
 ) {
     val isUser = message.role == MessageRole.USER
-    val isError = !isUser && message.content.contains("couldn't reach", ignoreCase = true)
+    // Failures are flagged by the repository, not guessed from their wording.
+    val isError = !isUser && message.isError
 
     val bubbleColor = when {
         isUser -> NoctaAccentGradientEnd

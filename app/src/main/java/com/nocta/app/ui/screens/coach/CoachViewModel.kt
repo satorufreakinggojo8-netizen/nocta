@@ -2,17 +2,30 @@ package com.nocta.app.ui.screens.coach
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nocta.app.data.remote.BackendConfig
+import com.nocta.app.data.remote.CoachFailures
 import com.nocta.app.domain.model.AiMessage
+import com.nocta.app.domain.model.JournalEntry
 import com.nocta.app.domain.model.MessageRole
+import com.nocta.app.domain.model.SleepScoreBreakdown
+import com.nocta.app.domain.model.SleepSession
+import com.nocta.app.domain.model.WindDownRun
+import com.nocta.app.domain.profile.SleepProfile
 import com.nocta.app.domain.repository.AiCoachRepository
+import com.nocta.app.domain.repository.SleepJournalRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
+import com.nocta.app.domain.repository.WindDownRepository
+import com.nocta.app.domain.usecase.BuildCoachContext
 import com.nocta.app.domain.usecase.CalculateSleepScore
+import com.nocta.app.domain.usecase.CoachContext
+import com.nocta.app.domain.usecase.CoachContextInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.util.UUID
@@ -35,7 +48,14 @@ data class CoachUiState(
     val scoreLabel: String? = null,
     val weakestFactor: String? = null,
     val sevenDayAvgHours: Double? = null,
-    val trackedNightsLast14: Int = 0
+    val trackedNightsLast14: Int = 0,
+    val journalDays: Int = 0,
+    /** False when the build has no coach backend; the UI must say so. */
+    val backendConfigured: Boolean = BackendConfig.isConfigured,
+    /** One-line summary of what Vela can actually see, for the empty state. */
+    val dataSummary: String? = null,
+    /** Real gaps in the data, shown so the user knows what to log next. */
+    val missingData: List<String> = emptyList()
 )
 
 @HiltViewModel
@@ -43,11 +63,20 @@ class CoachViewModel @Inject constructor(
     private val aiCoachRepository: AiCoachRepository,
     private val sleepProfileRepository: SleepProfileRepository,
     private val sleepRepository: SleepRepository,
+    private val journalRepository: SleepJournalRepository,
+    private val windDownRepository: WindDownRepository,
+    private val buildCoachContext: BuildCoachContext,
     private val calculateSleepScore: CalculateSleepScore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CoachUiState())
     val uiState: StateFlow<CoachUiState> = _uiState.asStateFlow()
+
+    private var sessions: List<SleepSession> = emptyList()
+    private var profile: SleepProfile? = null
+    private var journalEntries: List<JournalEntry> = emptyList()
+    private var completedRuns: List<WindDownRun> = emptyList()
+    private var cachedScore: SleepScoreBreakdown? = null
 
     init {
         observeContextData()
@@ -59,10 +88,9 @@ class CoachViewModel @Inject constructor(
             aiCoachRepository.observeMostRecentConversationId().collectLatest { conversationId ->
                 if (conversationId != null) {
                     aiCoachRepository.observeConversation(conversationId).collect { messages ->
-                        _uiState.value = _uiState.value.copy(
-                            conversationId = conversationId,
-                            messages = messages
-                        )
+                        _uiState.update {
+                            it.copy(conversationId = conversationId, messages = messages)
+                        }
                     }
                 }
             }
@@ -71,81 +99,120 @@ class CoachViewModel @Inject constructor(
 
     private fun observeContextData() {
         viewModelScope.launch {
-            sleepProfileRepository.observeProfile().collect { profile ->
-                if (profile != null) {
-                    val recommendedMidMinutes = (profile.recommendedMinMinutes + profile.recommendedMaxMinutes) / 2.0
-                    _uiState.value = _uiState.value.copy(
-                        userAge = profile.age,
-                        targetSleepHours = recommendedMidMinutes / 60.0
-                    )
+            sleepProfileRepository.observeProfile().collect { stored ->
+                profile = stored
+                if (stored != null) {
+                    val recommendedMid = (stored.recommendedMinMinutes + stored.recommendedMaxMinutes) / 2.0
+                    _uiState.update {
+                        it.copy(userAge = stored.age, targetSleepHours = recommendedMid / 60.0)
+                    }
                 }
+                refreshSummary()
             }
         }
         viewModelScope.launch {
-            sleepRepository.observeLastNight().collect { lastSession ->
-                if (lastSession != null) {
-                    val durationHours = lastSession.durationMinutes / 60.0
-                    _uiState.value = _uiState.value.copy(lastNightDurationHours = durationHours)
+            sleepRepository.observeRecentSessions(days = CONTEXT_DAYS).collect { recent ->
+                sessions = recent
+                val last = recent.maxByOrNull { it.date }
+                val score = if (recent.isEmpty()) null else calculateSleepScore(recent)
+                cachedScore = score
+                val weakest = score?.let { breakdown ->
+                    listOf(
+                        "duration" to breakdown.durationScore,
+                        "schedule consistency" to breakdown.consistencyScore,
+                        "sleep quality" to breakdown.qualityScore,
+                        "schedule timing" to breakdown.timingScore,
+                        "night awakenings" to breakdown.routineScore
+                    ).minByOrNull { it.second }?.first
                 }
-            }
-        }
-        viewModelScope.launch {
-            // Real score context so Vela explains the user's actual numbers
-            // instead of guessing. Insufficient history stays null — the
-            // context block then says so rather than fabricating a score.
-            sleepRepository.observeRecentSessions(days = 14).collect { recent ->
-                if (recent.isEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        scoreOverall = null,
-                        scoreLabel = null,
-                        weakestFactor = null,
-                        sevenDayAvgHours = null,
-                        trackedNightsLast14 = 0
-                    )
-                    return@collect
-                }
-                val breakdown = calculateSleepScore(recent)
-                val weakest = listOf(
-                    "duration" to breakdown.durationScore,
-                    "schedule consistency" to breakdown.consistencyScore,
-                    "sleep quality" to breakdown.qualityScore,
-                    "schedule timing" to breakdown.timingScore,
-                    "night awakenings" to breakdown.routineScore
-                ).minByOrNull { it.second }?.first
                 val last7 = recent.take(7)
-                _uiState.value = _uiState.value.copy(
-                    scoreOverall = breakdown.overall,
-                    scoreLabel = breakdown.label,
-                    weakestFactor = weakest,
-                    sevenDayAvgHours = last7.map { it.durationMinutes }.average() / 60.0,
-                    trackedNightsLast14 = recent.size
-                )
+                _uiState.update {
+                    it.copy(
+                        lastNightDurationHours = last?.durationMinutes?.let { minutes ->
+                            minutes / 60.0
+                        },
+                        scoreOverall = score?.takeIf { breakdown -> breakdown.hasData }?.overall,
+                        scoreLabel = score?.takeIf { breakdown -> breakdown.hasData }?.label,
+                        weakestFactor = weakest,
+                        sevenDayAvgHours = last7
+                            .takeIf { it.isNotEmpty() }
+                            ?.map { night -> night.durationMinutes }
+                            ?.average()
+                            ?.div(60.0),
+                        trackedNightsLast14 = recent.count { night ->
+                            !night.date.isBefore(java.time.LocalDate.now().minusDays(14))
+                        }
+                    )
+                }
+                refreshSummary()
+            }
+        }
+        viewModelScope.launch {
+            journalRepository.observeRecent(days = CONTEXT_DAYS).collect { entries ->
+                journalEntries = entries
+                _uiState.update { it.copy(journalDays = entries.count { entry -> entry.hasAnyAnswer }) }
+                refreshSummary()
+            }
+        }
+        viewModelScope.launch {
+            windDownRepository.observeRecentRuns(limit = 14).collect { runs ->
+                completedRuns = runs.filter { run ->
+                    run.outcome == com.nocta.app.domain.model.WindDownOutcome.COMPLETED
+                }
+                refreshSummary()
             }
         }
     }
 
+    private fun refreshSummary() {
+        val summary = buildList {
+            if (sessions.isNotEmpty()) {
+                add("${sessions.size} logged night${if (sessions.size == 1) "" else "s"}")
+            }
+            if (journalEntries.isNotEmpty()) {
+                add("${journalEntries.count { it.hasAnyAnswer }} journal days")
+            }
+            if (completedRuns.isNotEmpty()) add("${completedRuns.size} completed routines")
+        }
+        val gaps = buildContext("").missing
+        _uiState.update {
+            it.copy(
+                dataSummary = if (summary.isEmpty()) null else summary.joinToString(" · "),
+                missingData = gaps
+            )
+        }
+    }
+
+    private fun buildContext(prompt: String): CoachContext = buildCoachContext(
+        CoachContextInput(
+            prompt = prompt,
+            sessions = sessions,
+            profile = profile,
+            journalEntries = journalEntries,
+            completedWindDownRuns = completedRuns,
+            score = cachedScore
+        )
+    )
+
     fun onInputChanged(text: String) {
-        _uiState.value = _uiState.value.copy(inputText = text)
+        _uiState.update { it.copy(inputText = text) }
     }
 
     fun retryLastMessage() {
         val lastText = _uiState.value.lastUserMessageText
-        if (!lastText.isNullOrBlank() && !_uiState.value.isSending) {
-            // Remove the failed error message if present
-            val filteredMessages = _uiState.value.messages.filterNot {
-                it.role == MessageRole.ASSISTANT && it.content.contains("couldn't reach", ignoreCase = true)
-            }
-            _uiState.value = _uiState.value.copy(messages = filteredMessages)
-            send(promptOverride = lastText)
-        }
+        if (lastText.isNullOrBlank() || _uiState.value.isSending) return
+        // Drop the failed bubble(s) so retry doesn't stack error messages.
+        val filtered = _uiState.value.messages.filterNot { it.isError }
+        _uiState.update { it.copy(messages = filtered) }
+        send(promptOverride = lastText)
     }
 
     fun send(promptOverride: String? = null) {
         val text = promptOverride ?: _uiState.value.inputText
         if (text.isBlank() || _uiState.value.isSending) return
 
-        val currentState = _uiState.value
-        val conversationId = currentState.conversationId ?: UUID.randomUUID().toString()
+        val current = _uiState.value
+        val conversationId = current.conversationId ?: UUID.randomUUID().toString()
         val userMessage = AiMessage(
             id = UUID.randomUUID().toString(),
             role = MessageRole.USER,
@@ -154,70 +221,77 @@ class CoachViewModel @Inject constructor(
             conversationId = conversationId
         )
 
-        // Real context only: every line below is computed from stored records.
-        // With no history at all the block is empty and Vela must say data is
-        // missing rather than inventing numbers (backend prompt enforces this).
-        val contextInfo = buildList {
-            currentState.userAge?.let { add("User Age: $it") }
-            currentState.targetSleepHours?.let { add("Target Sleep Goal: ${"%.1f".format(it)} hrs") }
-            currentState.lastNightDurationHours?.let { add("Last Night Sleep: ${"%.1f".format(it)} hrs") }
-            currentState.scoreOverall?.let { overall ->
-                add("Sleep Score (14-night window): $overall (${currentState.scoreLabel})")
-                currentState.weakestFactor?.let { add("Weakest factor: $it") }
-            }
-            currentState.sevenDayAvgHours?.let { add("7-day average sleep: ${"%.1f".format(it)} hrs") }
-            if (currentState.trackedNightsLast14 > 0) {
-                add("Tracked nights in window: ${currentState.trackedNightsLast14}/14 — treat thin history cautiously")
-            }
+        val enriched = buildContext(text).envelope(text)
+
+        val alreadyPresent = current.messages.any { it.role == MessageRole.USER && it.content == text }
+        val updatedMessages = if (alreadyPresent) current.messages else current.messages + userMessage
+
+        _uiState.update {
+            it.copy(
+                conversationId = conversationId,
+                messages = updatedMessages,
+                inputText = "",
+                isSending = true,
+                expression = CompanionExpression.THINKING,
+                lastUserMessageText = text
+            )
         }
-
-        val enrichedText = if (contextInfo.isNotEmpty()) {
-            "[Sleep Context: ${contextInfo.joinToString(", ")}]\n$text"
-        } else {
-            text
-        }
-
-        val userAlreadyExists = currentState.messages.any { it.role == MessageRole.USER && it.content == text }
-        val updatedMessages = if (userAlreadyExists) currentState.messages else currentState.messages + userMessage
-
-        _uiState.value = currentState.copy(
-            conversationId = conversationId,
-            messages = updatedMessages,
-            inputText = "",
-            isSending = true,
-            expression = CompanionExpression.THINKING,
-            lastUserMessageText = text
-        )
 
         viewModelScope.launch {
-            try {
-                if (!userAlreadyExists) aiCoachRepository.saveUserMessage(userMessage)
-                aiCoachRepository.ask(conversationId, enrichedText).collect { assistantMessage ->
-                    val current = _uiState.value
-                    val withoutPreviousStreamOfSameId = current.messages.filterNot { it.id == assistantMessage.id }
-                    val newExpression = if (assistantMessage.isStreaming) CompanionExpression.RESPONDING else CompanionExpression.IDLE
+            if (!alreadyPresent) {
+                runCatching { aiCoachRepository.saveUserMessage(userMessage) }
+            }
 
-                    _uiState.value = current.copy(
-                        conversationId = current.conversationId ?: assistantMessage.conversationId,
-                        messages = withoutPreviousStreamOfSameId + assistantMessage,
-                        isSending = assistantMessage.isStreaming,
-                        expression = newExpression
+            if (!current.backendConfigured) {
+                // Truthful unavailable state: no fake answer, no wasted request.
+                _uiState.update {
+                    it.copy(
+                        messages = it.messages + errorMessage(CoachFailures.NOT_CONFIGURED),
+                        isSending = false,
+                        expression = CompanionExpression.IDLE
                     )
                 }
-            } catch (_: Exception) {
-                val current = _uiState.value
-                _uiState.value = current.copy(
-                    messages = current.messages + AiMessage(
-                        id = UUID.randomUUID().toString(),
-                        role = MessageRole.ASSISTANT,
-                        content = "I couldn't save this message. Please try again.",
-                        createdAt = LocalDateTime.now(),
-                        conversationId = conversationId
-                    ),
-                    isSending = false,
-                    expression = CompanionExpression.IDLE
-                )
+                return@launch
+            }
+
+            try {
+                aiCoachRepository.ask(conversationId, enriched).collect { assistantMessage ->
+                    val state = _uiState.value
+                    val withoutSameId = state.messages.filterNot { it.id == assistantMessage.id }
+                    _uiState.update {
+                        it.copy(
+                            conversationId = state.conversationId ?: assistantMessage.conversationId,
+                            messages = withoutSameId + assistantMessage,
+                            isSending = assistantMessage.isStreaming,
+                            expression = if (assistantMessage.isStreaming) {
+                                CompanionExpression.RESPONDING
+                            } else {
+                                CompanionExpression.IDLE
+                            }
+                        )
+                    }
+                }
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        messages = it.messages + errorMessage(CoachFailures.describe(t)),
+                        isSending = false,
+                        expression = CompanionExpression.IDLE
+                    )
+                }
             }
         }
+    }
+
+    private fun errorMessage(content: String) = AiMessage(
+        id = UUID.randomUUID().toString(),
+        role = MessageRole.ASSISTANT,
+        content = content,
+        createdAt = LocalDateTime.now(),
+        isError = true
+    )
+
+    private companion object {
+        const val CONTEXT_DAYS = 30
     }
 }

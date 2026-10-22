@@ -13,25 +13,27 @@ screen or data path does not prove a configured backend or device integration.
 | 6 | Sleep Details       | ✅ | `sleep_details/{id}`: report from Room — factors, baseline delta, check-in, missing-data notes |
 | 7 | Log Sleep           | ✅ | Manual entry with validation; saves as `SELF_REPORTED` |
 | 8 | Sleep History       | ✅ | Week/month/year quality calendar under Tracker, backed by Room `sleep_sessions`; day tap opens full report |
-| 9 | Sleep Optimization  | ✅ | Optimize tab: `PlanBedtime` from real history + editable wind-down routine |
-| 10 | Wind-Down Mode      | ✅ | Deep-link to Optimize's routine checklist |
-| 11 | AI Coach (landing)  | ✅ | Borderless Vela cutout header and empty state; 5 starter actions; context computed from stored records |
+| 9 | Sleep Optimization  | ✅ | Optimize tab: `PlanBedtime` from real history, schedule presets with preview, adjustable wind-down length |
+| 10 | Wind-Down Mode      | ✅ | Optimize routine runs: start / pause / resume / finish / dismiss, timed, with real completed history |
+| 11 | AI Coach (landing)  | ✅ | Borderless Vela cutout header and empty state; 7 starter actions; "what I can see" panel listing real data and gaps |
 | 12 | AI Conversation     | ✅ | Full streaming chat implementation |
 | 13 | Insights            | ✅ | 7/30/90-day trends, duration chart, streaks, score distribution (Room only) |
 | 14 | Weekly Report       | ◐ | Via Vela `Review my week` starter action; no dedicated screen |
 | 15 | Goals               | ☐ | |
 | 16 | Notifications       | ☐ | Not implemented — see docs/04-TRACKING-ALARMS-AUDIT.md §5 |
-| 17 | Profile             | ✅ | Age target, wake time, card mode |
+| 17 | Profile             | ✅ | Age target, wake time, card mode (schedule presets live in Optimize) |
 | 18 | Settings            | ◐ | Integrated into Profile |
-| 19 | Privacy             | ✅ | Data-flow explanation + JSON export + delete controls in Profile |
+| 19 | Privacy             | ✅ | Data-flow explanation + JSON export (nights, check-ins, journal, routines, settings) + delete controls |
 | 20 | Health Connect      | ☐ | Dependency only; audit + constraints in docs/04-TRACKING-ALARMS-AUDIT.md |
+| 21 | Sleep Journal       | ✅ | Seven-day journal: restfulness, stress, naps, caffeine/exercise timing, screens, routine, private notes, gated patterns |
 
 A local screen or data path does not prove a configured backend or device integration.
 
 ## UI composition rules (2.1 polish pass)
 
 ### Bottom navigation
-- Six destinations: Home, Sleep, Optimize, Coach, Insights, Profile.
+- Six destinations, in bar order: Home, Sleep, Coach, Optimize, Insights,
+  Profile.
 - The bar is a weighted `Row` (1/6 of the width per item) rather than
   Material's `NavigationBar`, whose fixed item width let "Optimize" wrap onto
   two lines. Labels are 11 sp, `maxLines = 1`, `softWrap = false`, so at the
@@ -55,6 +57,15 @@ A local screen or data path does not prove a configured backend or device integr
   dragging is clamped to the screen; tapping opens the Coach.
 - The Coach header uses the portrait and the empty state uses the full body, so
   both surfaces frame the same character consistently.
+
+### Journal and routine
+- Journal answers are optional; a `null` field is "not answered" and is never
+  rendered as zero. Blank entries are deleted instead of stored.
+- Pattern hints need at least three nights on each side of a factor and a
+  15-minute difference, and are always labelled "possible association, not
+  cause". Journal free-text never leaves the device.
+- Routine runs are real records: timer with pause accounting, ticked steps, and
+  a history list built only from completed runs.
 
 ### Empty and insufficient-data states
 - A score exists only when at least one stored night passes validation

@@ -32,11 +32,13 @@ input); other sources show "—" with the limitation spelled out
 - Support: Android 14+ has Health Connect built into the framework; Android
   9–13 need the Health Connect app from Google Play; the provider supports
   API 28+. Devices without it must be handled gracefully (feature hidden).
-- Decision: **not implemented in this pass.** Import mapping (time zone,
+- Decision: **not implemented, unchanged in 3.0.** Import mapping (time zone,
   overlapping sessions, dedupe against existing Room rows, permission UX)
   requires on-device validation that this environment cannot perform. The
   `HEALTH_CONNECT` DataSource value and entity schema are already in place, so
-  a future implementation slots in without a migration.
+  a future implementation slots in without a migration. No permission is
+  declared and no Health Connect code path exists in the app today — the
+  dependency alone does nothing.
 
 Sources:
 - https://developer.android.com/health-and-fitness/health-connect/features/sleep-sessions
@@ -86,12 +88,24 @@ Sources:
 ## 5. Reminders/notifications (not implemented)
 
 Wind-down/bedtime/morning reminders need `POST_NOTIFICATIONS` + scheduling
-(WorkManager or AlarmManager). Settings storage for wake time and wind-down
-routines exists (the inputs reminders would use), but no scheduler is wired;
-no notification permission is declared yet. Same device-validation blocker as
-the alarm.
+(WorkManager or AlarmManager). The inputs a reminder would use now exist and are
+persisted (wake time, wind-down length, enabled routine steps), but no scheduler
+is wired and no notification permission is declared. Same device-validation
+blocker as the alarm: delivery, permission denial, reboot and timer behaviour
+cannot be verified without a device.
 
-## 6. What this means for the app
+Consequence in the UI: nothing pretends to remind the user. The Optimize screen
+states the wind-down start time instead of promising a notification.
+
+## 6. Data Vela may use
+
+Vela's context is built on-device from real records only: sleep sessions,
+profile age, computed score breakdown, journal *derived counts* (never notes),
+and completed routine runs. Missing inputs are sent as an explicit missing-data
+list. No sensor, Health Connect or stage data is part of that context, so Vela
+cannot cite measurements the app never recorded.
+
+## 7. What this means for the app
 
 Declared permissions today: `INTERNET` only. The app makes no sensor access,
 requests no sensitive permission, runs no undisclosed background tracker, and

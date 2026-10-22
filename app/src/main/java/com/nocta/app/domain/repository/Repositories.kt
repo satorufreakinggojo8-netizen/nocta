@@ -28,6 +28,8 @@ interface SleepTrackingRepository {
     suspend fun start(startedAt: Instant): SleepTrackingSession
     suspend fun end(endedAt: Instant): SleepTrackingSession
     suspend fun discardActive()
+    /** Removes one stored tracking session (used for empty sessions). */
+    suspend fun discardSession(sessionId: String)
     /** Permanently removes all locally stored tracking sessions. */
     suspend fun deleteAllTrackingData()
 }

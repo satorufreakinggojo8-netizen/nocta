@@ -7,7 +7,9 @@ import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepTrackingError
 import com.nocta.app.domain.model.SleepTrackingSession
 import com.nocta.app.domain.model.SleepSession
+import com.nocta.app.domain.profile.SleepProfile
 import com.nocta.app.domain.repository.MorningCheckInRepository
+import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.repository.SleepTrackingRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
@@ -43,6 +45,7 @@ class SleepViewModel @Inject constructor(
     private val trackingRepository: SleepTrackingRepository,
     private val morningCheckInRepository: MorningCheckInRepository,
     private val sleepRepository: SleepRepository,
+    private val sleepProfileRepository: SleepProfileRepository,
     private val createSleepSession: CreateSleepSession,
     private val calculateSleepScore: CalculateSleepScore
 ) : ViewModel() {
@@ -67,8 +70,9 @@ class SleepViewModel @Inject constructor(
                 // Three-year window so the sleep-history calendar can navigate
                 // back through past seasons (see docs/03-SCREENS.md, Sleep History).
                 sleepRepository.observeRecentSessions(days = HISTORY_WINDOW_DAYS),
+                sleepProfileRepository.observeProfile(),
                 now
-            ) { active, completed, history, tick ->
+            ) { active, completed, history, profile, tick ->
 
                 val checkIn = completed?.let {
                     morningCheckInRepository.getForSession(it.id)
@@ -81,7 +85,13 @@ class SleepViewModel @Inject constructor(
                     latestCheckIn = checkIn,
                     isStale = active != null &&
                         SleepTrackingRules.isStale(active.startedAt, tick),
-                    sleepScore = _uiState.value.sleepScore,
+                    // The Tracker used to show no score at all because this field
+                    // was never computed; it now uses the same stored history
+                    // and age profile as the dashboard.
+                    sleepScore = calculateSleepScore(
+                        history,
+                        profile ?: SleepProfile(age = 18)
+                    ),
                     historySessions = history,
                     showMorningCheckIn = completed != null && checkIn == null,
                     message = _uiState.value.message
@@ -134,6 +144,18 @@ class SleepViewModel @Inject constructor(
         }
     }
 
+    /** Removes the latest completed session when it was too short to be a night. */
+    fun discardLatestSession() {
+        viewModelScope.launch {
+            try {
+                val latest = trackingRepository.observeLatestCompleted().first()
+                if (latest != null) trackingRepository.discardSession(latest.id)
+            } catch (t: Throwable) {
+                emitMessage(t)
+            }
+        }
+    }
+
     fun submitMorningCheckIn(checkIn: MorningCheckIn) {
         viewModelScope.launch {
             try {
@@ -179,6 +201,10 @@ class SleepViewModel @Inject constructor(
     private fun emitMessage(t: Throwable) {
         val text = when (t) {
             is SleepTrackingError -> t.message
+            // Domain guards (e.g. logSession rejecting a zero-length night)
+            // carry a human-readable reason.
+            is IllegalArgumentException -> t.message
+                ?: "That session can't be saved as a night's sleep."
             else -> "Something went wrong. Please try again."
         }
 

@@ -9,7 +9,17 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -21,14 +31,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nocta.app.domain.model.AiMessage
 import com.nocta.app.domain.model.MessageRole
-import com.nocta.app.ui.theme.*
+import com.nocta.app.ui.theme.NoctaAccent
+import com.nocta.app.ui.theme.NoctaAccentGradientEnd
+import com.nocta.app.ui.theme.NoctaAlert
+import com.nocta.app.ui.theme.NoctaBackground
+import com.nocta.app.ui.theme.NoctaSurface
+import com.nocta.app.ui.theme.NoctaSurfaceBorder
+import com.nocta.app.ui.theme.NoctaTextPrimary
+import com.nocta.app.ui.theme.NoctaTextSecondary
+import com.nocta.app.ui.theme.NoctaTypography
 
+/**
+ * Chat bubble in Nocta's own palette — violet for the user, charcoal for Vela —
+ * so the Coach screen reads as the same product as the rest of the app.
+ */
 @Composable
 fun AIMessageBubble(
     message: AiMessage,
@@ -39,15 +60,21 @@ fun AIMessageBubble(
     val isError = !isUser && message.content.contains("couldn't reach", ignoreCase = true)
 
     val bubbleColor = when {
-        isUser -> Color(0xFF7C3AED)
-        isError -> Color(0xFF371B1E)
-        else -> Color(0xFF161D30)
+        isUser -> NoctaAccentGradientEnd
+        isError -> NoctaBackground
+        else -> NoctaSurface
     }
 
     val textColor = when {
-        isUser -> Color.White
-        isError -> Color(0xFFFCA5A5)
-        else -> Color(0xFFE5E7EB)
+        isUser -> NoctaTextPrimary
+        isError -> NoctaAlert
+        else -> NoctaTextPrimary
+    }
+
+    val borderColor = when {
+        isUser -> NoctaAccent.copy(alpha = 0.55f)
+        isError -> NoctaAlert.copy(alpha = 0.55f)
+        else -> NoctaSurfaceBorder
     }
 
     Row(
@@ -56,18 +83,10 @@ fun AIMessageBubble(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 290.dp)
-                .clip(RoundedCornerShape(16.dp))
+                .widthIn(max = 300.dp)
+                .clip(RoundedCornerShape(18.dp))
                 .background(bubbleColor)
-                .border(
-                    width = 1.dp,
-                    color = when {
-                        isUser -> Color(0xFFA78BFA)
-                        isError -> Color(0xFFEF4444)
-                        else -> Color(0xFF2A3555)
-                    },
-                    shape = RoundedCornerShape(16.dp)
-                )
+                .border(1.dp, borderColor, RoundedCornerShape(18.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             if (!isUser && message.content.isEmpty() && message.isStreaming) {
@@ -75,7 +94,7 @@ fun AIMessageBubble(
             } else {
                 Text(
                     text = message.content,
-                    style = NoctaTypography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 20.sp),
+                    style = NoctaTypography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp),
                     color = textColor
                 )
 
@@ -85,21 +104,21 @@ fun AIMessageBubble(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF7F1D1D))
+                            .background(NoctaAlert.copy(alpha = 0.18f))
                             .clickable { onRetry() }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Refresh,
                             contentDescription = "Retry",
-                            tint = Color.White,
+                            tint = NoctaAlert,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Retry connection",
-                            style = NoctaTypography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            text = "Retry",
+                            style = NoctaTypography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = NoctaAlert
                         )
                     }
                 }
@@ -128,7 +147,7 @@ private fun TypingDots() {
                     .size(6.dp)
                     .alpha(alpha)
                     .clip(RoundedCornerShape(50))
-                    .background(Color(0xFFA78BFA))
+                    .background(NoctaAccent)
             )
         }
     }

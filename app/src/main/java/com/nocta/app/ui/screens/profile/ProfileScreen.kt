@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -302,26 +303,29 @@ private fun AgeEditor(currentAge: Int?, onSave: (Int) -> Unit) {
     Column {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(NoctaSpacing.sm),
+            horizontalArrangement = Arrangement.spacedBy(NoctaSpacing.xs),
             verticalAlignment = Alignment.CenterVertically
         ) {
             StepperButton("−", onClick = { if (age > 6) age-- })
             Box(
                 modifier = Modifier
+                    .widthIn(min = 52.dp)
                     .clip(NoctaShapes.small)
                     .background(NoctaBackground)
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     "$age",
                     style = NoctaTypography.titleMedium,
-                    color = NoctaTextPrimary
+                    color = NoctaTextPrimary,
+                    maxLines = 1
                 )
             }
             StepperButton("+", onClick = { if (age < 100) age++ })
             Spacer(Modifier.weight(1f))
-            Button(onClick = { onSave(age) }) {
-                Text("Save")
+            Button(onClick = { onSave(age) }, shape = NoctaShapes.small) {
+                Text("Save", maxLines = 1)
             }
         }
         Spacer(Modifier.height(NoctaSpacing.sm))
@@ -336,8 +340,12 @@ private fun AgeEditor(currentAge: Int?, onSave: (Int) -> Unit) {
 
 @Composable
 private fun StepperButton(label: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick) {
-        Text(label, fontWeight = FontWeight.Bold)
+    OutlinedButton(
+        onClick = onClick,
+        shape = NoctaShapes.small,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Text(label, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 

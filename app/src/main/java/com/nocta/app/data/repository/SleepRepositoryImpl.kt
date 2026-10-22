@@ -23,15 +23,24 @@ class SleepRepositoryImpl @Inject constructor(
 ) : SleepRepository {
 
     override fun observeLastNight(): Flow<SleepSession?> =
-        sleepDao.observeLastNight().map { it?.toDomain() }
+        sleepDao.observeLastNight().map { entity ->
+            // A legacy row with wake time == sleep time has no duration. Showing
+            // it produced the misleading "0h 0m" card, so it is ignored here and
+            // every other derived read path.
+            entity?.toDomain()?.takeIf { it.hasUsableWindow }
+        }
 
     override fun observeRecentSessions(days: Int): Flow<List<SleepSession>> {
         val since = LocalDate.now().minusDays(days.toLong()).toEpochDay()
-        return sleepDao.observeSince(since).map { list -> list.map { it.toDomain() } }
+        return sleepDao.observeSince(since).map { list ->
+            list.map { it.toDomain() }.filter { it.hasUsableWindow }
+        }
     }
 
     override fun observeSession(id: String): Flow<SleepSession?> =
-        sleepDao.observeById(id).map { it?.toDomain() }
+        sleepDao.observeById(id).map { entity ->
+            entity?.toDomain()?.takeIf { it.hasUsableWindow }
+        }
 
     override suspend fun getAllSessions(): List<SleepSession> =
         sleepDao.getAllForExport().map { it.toDomain() }
@@ -41,6 +50,11 @@ class SleepRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logSession(session: SleepSession) {
+        // Reject impossible records at the boundary so no screen can create the
+        // zero-duration row that used to reach the dashboard.
+        require(session.hasUsableWindow) {
+            "A sleep session needs a wake time after its sleep time."
+        }
         // Write locally first (offline-first) — sync happens in syncPending().
         sleepDao.upsert(session.toEntity())
     }

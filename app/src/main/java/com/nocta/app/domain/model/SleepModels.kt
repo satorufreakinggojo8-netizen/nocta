@@ -26,6 +26,15 @@ data class SleepSession(
     val durationMinutes: Long
         get() = (java.time.Duration.between(estimatedSleepTime, wakeTime).toMinutes() - awakeMinutes.coerceAtLeast(0))
             .coerceAtLeast(0)
+
+    /**
+     * A record whose wake time is not after its sleep time (or whose awake
+     * time swallows the whole night) carries no usable duration. Older builds
+     * could persist such a row; it must never be shown as "0h 0m" sleep or
+     * counted in a score.
+     */
+    val hasUsableWindow: Boolean
+        get() = wakeTime.isAfter(estimatedSleepTime) && durationMinutes > 0
 }
 
 /**
@@ -38,8 +47,17 @@ data class SleepScoreBreakdown(
     val consistencyScore: Int,   // 0-100, weight 25%
     val timingScore: Int,        // 0-100, weight 10%
     val qualityScore: Int,       // 0-100, weight 15%
-    val routineScore: Int        // 0-100, weight 10%
+    val routineScore: Int,       // 0-100, weight 10%
+    /** Nights that passed validation. 0 means there is nothing to score yet. */
+    val trackedNights: Int = 0
 ) {
+    /**
+     * A score only exists when at least one night passed validation. Without
+     * data the five factors are all zero, so the UI must show an empty state
+     * instead of a "0 — needs attention" verdict.
+     */
+    val hasData: Boolean get() = trackedNights > 0
+
     val overall: Int
         get() = (
             durationScore * 0.40 +

@@ -142,18 +142,33 @@ private fun BedtimePlanCard(
 
         Spacer(Modifier.height(NoctaSpacing.md))
 
+        Text(
+            "Shift wake time",
+            style = NoctaTypography.labelSmall,
+            color = NoctaTextSecondary
+        )
+        Spacer(Modifier.height(NoctaSpacing.xs))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(NoctaSpacing.sm)
         ) {
             OutlinedButton(
                 onClick = { onShiftWake(-30) },
-                modifier = Modifier.weight(1f)
-            ) { Text("Wake 30m earlier") }
+                modifier = Modifier.weight(1f),
+                shape = NoctaShapes.small,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+            ) {
+                Text("−30 min", style = NoctaTypography.labelSmall, maxLines = 1)
+            }
             OutlinedButton(
                 onClick = { onShiftWake(30) },
-                modifier = Modifier.weight(1f)
-            ) { Text("Wake 30m later") }
+                modifier = Modifier.weight(1f),
+                shape = NoctaShapes.small,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+            ) {
+                Text("+30 min", style = NoctaTypography.labelSmall, maxLines = 1)
+            }
         }
 
         Spacer(Modifier.height(NoctaSpacing.lg))
@@ -216,7 +231,8 @@ private fun WindDownCard(
                 Text(
                     step.label,
                     style = NoctaTypography.bodyMedium,
-                    color = if (step.isEnabled) NoctaTextPrimary else NoctaTextTertiary
+                    color = if (step.isEnabled) NoctaTextPrimary else NoctaTextTertiary,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }

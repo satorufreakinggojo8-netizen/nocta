@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nocta.app.domain.model.Difficulty
 import com.nocta.app.domain.model.Recommendation
 import com.nocta.app.ui.theme.*
@@ -28,12 +30,31 @@ fun MetricCard(
             .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
             .padding(NoctaSpacing.md)
     ) {
-        Text(label, style = NoctaTypography.labelSmall, color = NoctaTextSecondary)
+        Text(
+            label,
+            style = NoctaTypography.labelSmall,
+            color = NoctaTextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
         Spacer(Modifier.height(4.dp))
-        Text(value, style = NoctaTypography.headlineMedium, color = NoctaTextPrimary)
+        Text(
+            value,
+            style = NoctaTypography.headlineMedium.copy(fontSize = 22.sp),
+            color = NoctaTextPrimary,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
         caption?.let {
             Spacer(Modifier.height(2.dp))
-            Text(it, style = NoctaTypography.labelSmall, color = NoctaTextTertiary)
+            Text(
+                it,
+                style = NoctaTypography.labelSmall,
+                color = NoctaTextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

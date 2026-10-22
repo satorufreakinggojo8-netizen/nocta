@@ -50,7 +50,9 @@ router.post("/coach", async (req: AuthedRequest, res) => {
     }, priorMessages.map((m) => ({ role: m.role.toLowerCase() as "user" | "assistant", content: m.content })));
   } catch (err) {
     console.error("AI coach stream error:", err);
-    res.write(`data: I couldn't reach the coach right now. Please try again in a moment.\n\n`);
+    // Structured error frame: the Android client renders it as a retryable
+    // failure instead of saving the sentence as if Vela had said it.
+    res.write(`data: ${JSON.stringify({ error: "The coach service had a problem. Please retry." })}\n\n`);
   } finally {
     res.write("data: [DONE]\n\n");
     res.end();

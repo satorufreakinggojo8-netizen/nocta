@@ -2,23 +2,29 @@ package com.nocta.app.di
 
 import android.content.Context
 import androidx.room.Room
+import com.nocta.app.BuildConfig
 import com.nocta.app.data.local.MIGRATION_1_2
 import com.nocta.app.data.local.MIGRATION_2_3
 import com.nocta.app.data.local.MIGRATION_3_4
+import com.nocta.app.data.local.MIGRATION_4_5
 import com.nocta.app.data.local.NoctaDatabase
 import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.data.repository.AiCoachRepositoryImpl
 import com.nocta.app.data.repository.MorningCheckInRepositoryImpl
+import com.nocta.app.data.repository.SleepJournalRepositoryImpl
+import com.nocta.app.data.repository.WindDownRepositoryImpl
 import com.nocta.app.data.repository.SleepProfileRepositoryImpl
 import com.nocta.app.data.repository.SettingsRepositoryImpl
 import com.nocta.app.data.repository.SleepRepositoryImpl
 import com.nocta.app.data.repository.SleepTrackingRepositoryImpl
 import com.nocta.app.domain.repository.AiCoachRepository
 import com.nocta.app.domain.repository.MorningCheckInRepository
+import com.nocta.app.domain.repository.SleepJournalRepository
 import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.repository.SleepTrackingRepository
+import com.nocta.app.domain.repository.WindDownRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
 import dagger.Binds
 import dagger.Module
@@ -33,8 +39,6 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
-private const val BASE_URL_PLACEHOLDER = "https://api.nocta.example.com/"
-
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
@@ -48,6 +52,9 @@ object NetworkModule {
 
         return OkHttpClient.Builder()
             .addInterceptor(logging)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            // Coach answers stream token-by-token; a short read timeout would
+            // abort a slow-but-working response mid-sentence.
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
     }
@@ -56,7 +63,8 @@ object NetworkModule {
     @Singleton
     fun provideRetrofit(client: OkHttpClient): Retrofit =
         Retrofit.Builder()
-            .baseUrl(BASE_URL_PLACEHOLDER)
+            // Injected per build (see app/build.gradle.kts); never hardcoded here.
+            .baseUrl(BuildConfig.API_BASE_URL)
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create())
             .build()
@@ -84,7 +92,8 @@ object DatabaseModule {
             .addMigrations(
                 MIGRATION_1_2,
                 MIGRATION_2_3,
-                MIGRATION_3_4
+                MIGRATION_3_4,
+                MIGRATION_4_5
             )
             .build()
 
@@ -107,6 +116,14 @@ object DatabaseModule {
     @Provides
     fun provideUserProfileDao(db: NoctaDatabase) =
         db.userProfileDao()
+
+    @Provides
+    fun provideJournalDao(db: NoctaDatabase) =
+        db.journalDao()
+
+    @Provides
+    fun provideWindDownDao(db: NoctaDatabase) =
+        db.windDownDao()
 }
 
 @Module
@@ -151,4 +168,14 @@ abstract class RepositoryModule {
     abstract fun bindSettingsRepository(
         impl: SettingsRepositoryImpl
     ): SettingsRepository
+
+    @Binds
+    abstract fun bindSleepJournalRepository(
+        impl: SleepJournalRepositoryImpl
+    ): SleepJournalRepository
+
+    @Binds
+    abstract fun bindWindDownRepository(
+        impl: WindDownRepositoryImpl
+    ): WindDownRepository
 }

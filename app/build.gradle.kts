@@ -47,6 +47,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    testOptions {
+        // Robolectric-based Compose layout tests need the merged resources and
+        // manifest (they verify the bottom bar at a real phone width).
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 dependencies {
@@ -83,4 +89,11 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+
+    // Compose layout tests on the JVM (Robolectric) — used to prove the bottom
+    // navigation labels never wrap at the narrowest supported width.
+    testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

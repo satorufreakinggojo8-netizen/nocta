@@ -1,0 +1,91 @@
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+> Task :app:compileDebugKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebug UP-TO-DATE
+> Task :app:compileDebugJavaWithJavac UP-TO-DATE
+> Task :app:hiltAggregateDepsDebug UP-TO-DATE
+> Task :app:hiltJavaCompileDebug UP-TO-DATE
+> Task :app:transformDebugClassesWithAsm UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
+> Task :app:kspDebugUnitTestKotlin UP-TO-DATE
+> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
+> Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsDebugUnitTest UP-TO-DATE
+> Task :app:hiltJavaCompileDebugUnitTest NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:transformDebugUnitTestClassesWithAsm UP-TO-DATE
+> Task :app:testDebugUnitTest UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:buildKotlinToolingMetadata
+> Task :app:generateReleaseBuildConfig
+> Task :app:generateReleaseResValues
+> Task :app:checkReleaseAarMetadata
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:mergeReleaseResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:preReleaseUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileReleaseUnitTest
+> Task :app:processReleaseManifestForPackage
+> Task :app:javaPreCompileRelease
+> Task :app:processReleaseResources
+
+> Task :app:kspReleaseKotlin
+w: [ksp] /workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/data/local/NoctaDatabase.kt:17: Schema export directory was not provided to the annotation processor so Room cannot export the schema. You can either provide `room.schemaLocation` annotation processor argument by applying the Room Gradle plugin (id 'androidx.room') OR set exportSchema to false.
+
+> Task :app:compileReleaseKotlin
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/data/local/Migrations.kt:7:26 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/data/local/Migrations.kt:31:26 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/data/local/Migrations.kt:50:26 The corresponding parameter in the supertype 'Migration' is named 'db'. This may cause problems when calling this function with named arguments.
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/ui/components/SleepCalendarCard.kt:383:5 Parameter 'month' is never used
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/main/java/com/nocta/app/ui/theme/Theme.kt:33:5 Parameter 'dynamicColor' is never used
+
+> Task :app:compileReleaseJavaWithJavac
+> Task :app:hiltAggregateDepsRelease
+> Task :app:hiltJavaCompileRelease
+> Task :app:processReleaseJavaRes
+> Task :app:bundleReleaseClassesToCompileJar
+> Task :app:transformReleaseClassesWithAsm
+> Task :app:bundleReleaseClassesToRuntimeJar
+> Task :app:kspReleaseUnitTestKotlin
+
+> Task :app:compileReleaseUnitTestKotlin
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/test/java/com/nocta/app/domain/usecase/SleepTrackingRulesTest.kt:25:33 Unnecessary non-null assertion (!!) on a non-null receiver of type String
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/test/java/com/nocta/app/domain/usecase/SleepTrackingRulesTest.kt:40:33 Unnecessary non-null assertion (!!) on a non-null receiver of type String
+w: file:///workspace/chats/d06ff49ab42a3c69c05f5868/app/src/test/java/com/nocta/app/domain/usecase/SleepTrackingRulesTest.kt:54:33 Unnecessary non-null assertion (!!) on a non-null receiver of type String
+
+> Task :app:compileReleaseUnitTestJavaWithJavac NO-SOURCE
+> Task :app:hiltAggregateDepsReleaseUnitTest
+> Task :app:hiltJavaCompileReleaseUnitTest NO-SOURCE
+> Task :app:processReleaseUnitTestJavaRes
+> Task :app:transformReleaseUnitTestClassesWithAsm
+> Task :app:testReleaseUnitTest
+> Task :app:test
+
+BUILD SUCCESSFUL in 16s
+64 actionable tasks: 33 executed, 31 up-to-date

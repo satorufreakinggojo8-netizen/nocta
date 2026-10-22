@@ -77,8 +77,9 @@ class HomeViewModel @Inject constructor(
         const val DEFAULT_PROFILE_AGE = 18
     }
 
-    private fun estimateSleepDebt(recent: List<SleepSession>): SleepDebt {
-        if (recent.isEmpty()) return SleepDebt(SleepDebtStatus.WELL_RESTED, 0)
+    /** Null when there is no history: "you're well rested" would be a claim the data can't support. */
+    private fun estimateSleepDebt(recent: List<SleepSession>): SleepDebt? {
+        if (recent.isEmpty()) return null
         val targetMinutes = 8 * 60
         val avgMinutes = recent.map { it.durationMinutes }.average()
         val deficitPerNight = (targetMinutes - avgMinutes).coerceAtLeast(0.0)
@@ -101,7 +102,8 @@ class HomeViewModel @Inject constructor(
         lastNight: SleepSession?,
         breakdown: SleepScoreBreakdown?
     ): Recommendation? {
-        if (breakdown == null) return null
+        // No scored history means no personalised advice to give yet.
+        if (breakdown == null || !breakdown.hasData) return null
         return when {
             breakdown.consistencyScore < 70 -> Recommendation(
                 id = "rec_consistency",

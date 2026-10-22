@@ -5,11 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.nocta.app.domain.model.SleepScoreCardMode
 import com.nocta.app.domain.profile.SleepProfile
 import com.nocta.app.domain.repository.AiCoachRepository
-import com.nocta.app.domain.repository.MorningCheckInRepository
 import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
-import com.nocta.app.domain.repository.SleepRepository
-import com.nocta.app.domain.repository.SleepTrackingRepository
+import com.nocta.app.domain.usecase.DeleteAllSleepData
 import com.nocta.app.domain.usecase.ExportSleepData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,11 +40,9 @@ data class ProfileUiState(
 class ProfileViewModel @Inject constructor(
     private val sleepProfileRepository: SleepProfileRepository,
     private val settingsRepository: SettingsRepository,
-    private val sleepRepository: SleepRepository,
-    private val sleepTrackingRepository: SleepTrackingRepository,
-    private val morningCheckInRepository: MorningCheckInRepository,
     private val aiCoachRepository: AiCoachRepository,
-    private val exportSleepData: ExportSleepData
+    private val exportSleepData: ExportSleepData,
+    private val deleteAllSleepData: DeleteAllSleepData
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
@@ -140,15 +136,12 @@ class ProfileViewModel @Inject constructor(
 
     fun confirmDeleteSleepData() {
         viewModelScope.launch {
-            runCatching {
-                sleepRepository.deleteAllSleepData()
-                sleepTrackingRepository.deleteAllTrackingData()
-                morningCheckInRepository.deleteAllCheckIns()
-            }.onSuccess {
+            runCatching { deleteAllSleepData() }.onSuccess {
                 _uiState.update {
                     it.copy(
                         confirmDeleteSleep = false,
-                        deleteDoneMessage = "All sleep records, tracking sessions, and check-ins were deleted from this device."
+                        deleteDoneMessage = "All sleep records, tracking sessions, check-ins, " +
+                            "journal entries, and routine history were deleted from this device."
                     )
                 }
             }.onFailure { error ->

@@ -134,11 +134,11 @@ private fun StandardScoreContent(breakdown: SleepScoreBreakdown, animatedScore: 
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            ScoreFactorPip("Duration", breakdown.durationScore)
-            ScoreFactorPip("Consistency", breakdown.consistencyScore)
-            ScoreFactorPip("Timing", breakdown.timingScore)
-            ScoreFactorPip("Recovery", breakdown.qualityScore)
-            ScoreFactorPip("Routine", breakdown.routineScore)
+            ScoreFactorPip("Duration", breakdown.durationScore, Modifier.weight(1f))
+            ScoreFactorPip("Consistency", breakdown.consistencyScore, Modifier.weight(1f))
+            ScoreFactorPip("Timing", breakdown.timingScore, Modifier.weight(1f))
+            ScoreFactorPip("Recovery", breakdown.qualityScore, Modifier.weight(1f))
+            ScoreFactorPip("Routine", breakdown.routineScore, Modifier.weight(1f))
         }
     }
 }
@@ -233,9 +233,70 @@ private fun ScoreCardModeSelector(
     }
 }
 
+/**
+ * Shown instead of a numeric score when no night has passed validation. A
+ * "0 — needs attention" verdict would be misleading: there is simply nothing
+ * to score yet.
+ */
 @Composable
-private fun ScoreFactorPip(label: String, value: Int) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun SleepScoreEmptyCard(
+    onLogSleep: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(NoctaShapes.large)
+            .background(Brush.verticalGradient(listOf(NoctaSurfaceElevated, NoctaSurface)))
+            .padding(NoctaSpacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Sleep Score",
+            style = NoctaTypography.labelSmall,
+            color = NoctaTextSecondary
+        )
+        Spacer(Modifier.height(NoctaSpacing.sm))
+        Text(
+            text = "—",
+            style = NoctaScoreDisplay,
+            color = NoctaTextTertiary
+        )
+        Text(
+            text = "No score yet",
+            style = NoctaTypography.titleMedium,
+            color = NoctaTextPrimary,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(NoctaSpacing.sm))
+        Text(
+            text = "Log or track a night of sleep and Nocta will score your duration, " +
+                "consistency, timing and recovery.",
+            style = NoctaTypography.bodyMedium,
+            color = NoctaTextSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        Spacer(Modifier.height(NoctaSpacing.lg))
+        androidx.compose.material3.Button(
+            onClick = onLogSleep,
+            modifier = Modifier.fillMaxWidth(),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                containerColor = NoctaAccent,
+                contentColor = androidx.compose.ui.graphics.Color(0xFF14121F)
+            ),
+            shape = NoctaShapes.medium
+        ) {
+            Text("Log a night", style = NoctaTypography.bodyMedium, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun ScoreFactorPip(label: String, value: Int, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Box(
             modifier = Modifier
                 .size(6.dp)
@@ -243,7 +304,13 @@ private fun ScoreFactorPip(label: String, value: Int) {
                 .background(scoreColor(value))
         )
         Spacer(Modifier.height(4.dp))
-        Text(text = label, style = NoctaTypography.labelSmall, color = NoctaTextTertiary)
+        Text(
+            text = label,
+            style = NoctaTypography.labelSmall.copy(fontSize = 10.sp, letterSpacing = 0.sp),
+            color = NoctaTextTertiary,
+            maxLines = 1,
+            softWrap = false
+        )
     }
 }
 

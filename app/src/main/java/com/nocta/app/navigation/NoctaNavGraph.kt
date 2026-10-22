@@ -1,15 +1,10 @@
 package com.nocta.app.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,11 +17,12 @@ import com.nocta.app.ui.screens.coach.CoachScreen
 import com.nocta.app.ui.screens.details.SleepDetailScreen
 import com.nocta.app.ui.screens.home.HomeScreen
 import com.nocta.app.ui.screens.insights.InsightsScreen
+import com.nocta.app.ui.screens.journal.JournalScreen
 import com.nocta.app.ui.screens.log.LogSleepScreen
 import com.nocta.app.ui.screens.optimize.OptimizeScreen
 import com.nocta.app.ui.screens.profile.ProfileScreen
-import com.nocta.app.ui.screens.sleep.SleepScreen   // NEW
-import com.nocta.app.ui.theme.NoctaTextSecondary
+import com.nocta.app.ui.screens.sleep.SleepScreen
+import com.nocta.app.ui.theme.NoctaBackground
 
 @Composable
 fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
@@ -34,8 +30,9 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
     val currentRoute = backStackEntry?.destination?.route
 
     Scaffold(
+        containerColor = NoctaBackground,
         bottomBar = {
-            if (currentRoute in NoctaDestination.bottomNavItems.map { it.route }) {
+            if (currentRoute in bottomNavDestinations.map { it.route }) {
                 NoctaBottomNavigation(
                     currentRoute = currentRoute,
                     onNavigate = { destination ->
@@ -77,8 +74,13 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
                         navController.navigate(
                             NoctaRoutes.SLEEP_DETAILS.replace("{sessionId}", sessionId)
                         )
-                    }
+                    },
+                    onLogSleep = { navController.navigate(NoctaRoutes.LOG_SLEEP) },
+                    onOpenJournal = { navController.navigate(NoctaRoutes.JOURNAL) }
                 )
+            }
+            composable(NoctaRoutes.JOURNAL) {
+                JournalScreen(onBack = { navController.popBackStack() })
             }
             composable(NoctaDestination.Optimize.route) {
                 OptimizeScreen()
@@ -112,17 +114,5 @@ fun NoctaNavGraph(navController: NavHostController = rememberNavController()) {
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ComingSoonScreen(name: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("$name — coming soon", color = NoctaTextSecondary)
     }
 }

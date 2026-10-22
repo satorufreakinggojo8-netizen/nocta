@@ -1,6 +1,8 @@
 package com.nocta.app.ui.screens.sleep
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -21,8 +24,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nocta.app.domain.model.MorningCheckIn
@@ -31,9 +37,14 @@ import com.nocta.app.domain.model.SleepScoreBreakdown
 import com.nocta.app.domain.model.SleepTrackingSession
 import com.nocta.app.ui.components.MetricCard
 import com.nocta.app.ui.components.SleepCalendarCard
+import com.nocta.app.ui.components.SleepScoreEmptyCard
+import com.nocta.app.ui.theme.NoctaAccent
+import com.nocta.app.ui.theme.NoctaAlert
 import com.nocta.app.ui.theme.NoctaBackground
 import com.nocta.app.ui.theme.NoctaShapes
 import com.nocta.app.ui.theme.NoctaSpacing
+import com.nocta.app.ui.theme.NoctaSurface
+import com.nocta.app.ui.theme.NoctaSurfaceBorder
 import com.nocta.app.ui.theme.NoctaTextPrimary
 import com.nocta.app.ui.theme.NoctaTextSecondary
 import com.nocta.app.ui.theme.NoctaTextTertiary
@@ -47,8 +58,42 @@ private val TIME_FMT: DateTimeFormatter =
     DateTimeFormatter.ofPattern("h:mm a")
 
 @Composable
+private fun NightRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = NoctaTypography.bodyMedium,
+            color = NoctaTextSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            value,
+            style = NoctaTypography.titleMedium,
+            color = NoctaTextPrimary,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun formatTrackedDuration(minutes: Long): String {
+    val hours = minutes / 60
+    val remainder = minutes % 60
+    return if (remainder == 0L) "${hours}h" else "${hours}h ${remainder}m"
+}
+
+@Composable
 fun SleepScreen(
     onOpenSleepDetails: (String) -> Unit = {},
+    onLogSleep: () -> Unit = {},
+    onOpenJournal: () -> Unit = {},
     viewModel: SleepViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -88,7 +133,10 @@ fun SleepScreen(
 
         state.latestCompleted?.let { session ->
             item {
-                LatestCompletedSection(session)
+                LatestCompletedSection(
+                    session = session,
+                    onDiscardShortSession = viewModel::discardLatestSession
+                )
             }
         }
 
@@ -100,9 +148,45 @@ fun SleepScreen(
             }
         }
 
-        state.sleepScore?.let { score ->
-            item {
+        item {
+            val score = state.sleepScore
+            if (score != null && score.hasData) {
                 SleepScoreSection(score)
+            } else if (!state.isLoading) {
+                SleepScoreEmptyCard(onLogSleep = onLogSleep)
+            }
+        }
+
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(NoctaShapes.medium)
+                    .background(NoctaSurface)
+                    .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
+                    .clickable { onOpenJournal() }
+                    .padding(NoctaSpacing.md),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Sleep journal",
+                        style = NoctaTypography.titleMedium,
+                        color = NoctaTextPrimary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        "Caffeine, stress, naps, screens — optional notes that make patterns possible.",
+                        style = NoctaTypography.labelSmall,
+                        color = NoctaTextTertiary
+                    )
+                }
+                Text(
+                    "Open",
+                    style = NoctaTypography.labelSmall,
+                    color = NoctaAccent,
+                    maxLines = 1
+                )
             }
         }
 
@@ -250,7 +334,8 @@ private fun ActiveTrackingCard(
 
 @Composable
 private fun LatestCompletedSection(
-    session: SleepTrackingSession
+    session: SleepTrackingSession,
+    onDiscardShortSession: () -> Unit
 ) {
     val ended = session.endedAt ?: return
     val zone = ZoneId.systemDefault()
@@ -264,6 +349,30 @@ private fun LatestCompletedSection(
     val minutes =
         Duration.between(session.startedAt, ended).toMinutes()
 
+    // A start/end in the same minute is not a night of sleep; saying "0h 0m"
+    // would look like a bug in the app rather than an empty session.
+    if (minutes < 1) {
+        Column {
+            Text(
+                "Last tracked night",
+                style = NoctaTypography.titleMedium,
+                color = NoctaTextPrimary,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(bottom = NoctaSpacing.sm)
+            )
+            Text(
+                "That session was too short to record. Start tracking when you get into bed.",
+                style = NoctaTypography.bodyMedium,
+                color = NoctaTextSecondary
+            )
+            Spacer(Modifier.height(NoctaSpacing.xs))
+            TextButton(onClick = onDiscardShortSession) {
+                Text("Dismiss", color = NoctaAlert)
+            }
+        }
+        return
+    }
+
     Column {
         Text(
             "Last tracked night",
@@ -273,26 +382,17 @@ private fun LatestCompletedSection(
             modifier = Modifier.padding(bottom = NoctaSpacing.sm)
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(NoctaSpacing.sm)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(NoctaShapes.medium)
+                .background(NoctaSurface)
+                .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
+                .padding(horizontal = NoctaSpacing.md, vertical = NoctaSpacing.xs)
         ) {
-            MetricCard(
-                "Bedtime",
-                startLocal.format(TIME_FMT),
-                modifier = Modifier.weight(1f)
-            )
-
-            MetricCard(
-                "Wake time",
-                endLocal.format(TIME_FMT),
-                modifier = Modifier.weight(1f)
-            )
-
-            MetricCard(
-                "Duration",
-                "${minutes / 60}h ${minutes % 60}m",
-                modifier = Modifier.weight(1f)
-            )
+            NightRow("Bedtime", startLocal.format(TIME_FMT))
+            NightRow("Wake time", endLocal.format(TIME_FMT))
+            NightRow("Duration", formatTrackedDuration(minutes))
         }
 
         Spacer(Modifier.height(NoctaSpacing.sm))

@@ -24,14 +24,15 @@ class CalculateSleepScore(
                 session.nightAwakenings >= 0 &&
                 session.awakeMinutes >= 0
         }
-        if (validSessions.isEmpty()) return SleepScoreBreakdown(0, 0, 0, 0, 0)
+        if (validSessions.isEmpty()) return SleepScoreBreakdown(0, 0, 0, 0, 0, trackedNights = 0)
 
         return SleepScoreBreakdown(
             durationScore = scoreDuration(validSessions, profile),
             consistencyScore = scoreClockConsistency(validSessions) { it.bedtime },
             timingScore = scoreClockConsistency(validSessions) { midpoint(it) },
             qualityScore = scoreQuality(validSessions),
-            routineScore = scoreAwakenings(validSessions)
+            routineScore = scoreAwakenings(validSessions),
+            trackedNights = validSessions.size
         )
     }
 

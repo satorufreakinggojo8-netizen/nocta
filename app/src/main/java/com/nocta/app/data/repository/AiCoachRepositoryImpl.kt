@@ -3,6 +3,7 @@ package com.nocta.app.data.repository
 import com.nocta.app.data.local.AiMessageDao
 import com.nocta.app.data.local.AiMessageEntity
 import com.nocta.app.data.remote.AiCoachRequestDto
+import com.nocta.app.data.remote.CoachFailures
 import com.nocta.app.data.remote.NoctaApi
 import com.nocta.app.domain.model.AiMessage
 import com.nocta.app.domain.model.MessageRole
@@ -12,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import org.json.JSONObject
+import retrofit2.HttpException
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.UUID
@@ -22,6 +26,9 @@ import javax.inject.Inject
  * emits progressively-growing AiMessage snapshots so the UI can render a
  * live "typing" effect (AIMessageBubble). Persists the final message locally
  * once the stream completes.
+ *
+ * Failures are emitted as `AiMessage(isError = true)` — never persisted — so
+ * the UI can offer a retry instead of showing a half-answer as Vela's advice.
  */
 class AiCoachRepositoryImpl @Inject constructor(
     private val api: NoctaApi,
@@ -50,28 +57,43 @@ class AiCoachRepositoryImpl @Inject constructor(
 
         try {
             val response = api.askCoach(AiCoachRequestDto(convoId, message))
+            if (!response.isSuccessful) throw HttpException(response)
             val body = response.body() ?: throw IllegalStateException("Empty AI response body")
 
             body.source().use { source ->
                 while (!source.exhausted()) {
                     val line = source.readUtf8Line() ?: break
-                    if (line.startsWith("data:")) {
-                        val payload = line.removePrefix("data:").removePrefix(" ")
-                        if (payload == "[DONE]") break
-                        val token = org.json.JSONObject(payload).getString("token")
-                        builder.append(token)
-                        trySend(
-                            AiMessage(
-                                id = messageId,
-                                role = MessageRole.ASSISTANT,
-                                content = builder.toString(),
-                                createdAt = LocalDateTime.now(),
-                                isStreaming = true
-                            )
-                        )
+                    if (!line.startsWith("data:")) continue
+                    val payload = line.removePrefix("data:").trim()
+                    if (payload.isEmpty()) continue
+                    if (payload == "[DONE]") break
+
+                    // Token frames are JSON; the backend's error path writes a
+                    // plain-text data line, which is surfaced as the answer text
+                    // rather than crashing the reader.
+                    val json = runCatching { JSONObject(payload) }.getOrNull()
+                    val token = if (json != null) {
+                        val error = json.optString("error")
+                        if (error.isNotEmpty()) throw IllegalStateException(error)
+                        json.optString("token")
+                    } else {
+                        payload
                     }
+                    if (token.isEmpty()) continue
+                    builder.append(token)
+                    trySend(
+                        AiMessage(
+                            id = messageId,
+                            role = MessageRole.ASSISTANT,
+                            content = builder.toString(),
+                            createdAt = LocalDateTime.now(),
+                            isStreaming = true
+                        )
+                    )
                 }
             }
+
+            if (builder.isBlank()) throw IllegalStateException(CoachFailures.EMPTY)
 
             val finalMessage = AiMessage(
                 id = messageId,
@@ -92,15 +114,15 @@ class AiCoachRepositoryImpl @Inject constructor(
                 )
             )
         } catch (t: Throwable) {
-            // Surface a clear, non-alarmist failure message rather than a stack trace in the UI —
-            // the actual error is left to be logged by the calling ViewModel/crash reporter.
+            // Never surface a stack trace, and never persist a failure as advice.
             trySend(
                 AiMessage(
                     id = messageId,
                     role = MessageRole.ASSISTANT,
-                    content = "I couldn't reach the coach right now. Please try again in a moment.",
+                    content = CoachFailures.describe(t),
                     createdAt = LocalDateTime.now(),
-                    isStreaming = false
+                    isStreaming = false,
+                    isError = true
                 )
             )
         } finally {
@@ -115,7 +137,13 @@ class AiCoachRepositoryImpl @Inject constructor(
                     id = it.id,
                     role = MessageRole.valueOf(it.role),
                     content = it.content,
-                    createdAt = LocalDateTime.now() // display-only reconstruction; see entity for real epoch millis
+                    // Reconstruct the real timestamp so restored history keeps
+                    // its order and time instead of "now" for every bubble.
+                    createdAt = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(it.createdAtEpochMillis),
+                        ZoneId.systemDefault()
+                    ),
+                    conversationId = it.conversationId
                 )
             }
         }

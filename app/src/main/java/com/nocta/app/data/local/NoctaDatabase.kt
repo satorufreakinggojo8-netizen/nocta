@@ -9,9 +9,11 @@ import androidx.room.RoomDatabase
         AiMessageEntity::class,
         SleepTrackingSessionEntity::class,
         MorningCheckInEntity::class,
-        UserProfileEntity::class
+        UserProfileEntity::class,
+        JournalEntryEntity::class,
+        WindDownRunEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class NoctaDatabase : RoomDatabase() {
@@ -25,4 +27,8 @@ abstract class NoctaDatabase : RoomDatabase() {
     abstract fun morningCheckInDao(): MorningCheckInDao
 
     abstract fun userProfileDao(): UserProfileDao
+
+    abstract fun journalDao(): JournalDao
+
+    abstract fun windDownDao(): WindDownDao
 }

@@ -18,9 +18,29 @@ sealed class NoctaDestination(val route: String, val label: String, val icon: Im
     data object Profile : NoctaDestination("profile", "Profile", Icons.Outlined.Person)
 
     companion object {
-        val bottomNavItems = listOf(Home, Sleep, Optimize, Coach, Insights, Profile)
+        /**
+         * Kept as a plain list; the bar reads [bottomNavDestinations] instead.
+         * That top-level list initializes the destination objects directly and
+         * avoids the sealed-class companion being touched while the nested
+         * objects are still being initialised.
+         */
+        val bottomNavItems: List<NoctaDestination>
+            get() = bottomNavDestinations
     }
 }
+
+/**
+ * The six primary destinations, in bar order: Home, Sleep, Coach, Optimize,
+ * Insights, Profile — the coach sits next to sleep, and Optimize follows it.
+ */
+val bottomNavDestinations: List<NoctaDestination> = listOf(
+    NoctaDestination.Home,
+    NoctaDestination.Sleep,
+    NoctaDestination.Coach,
+    NoctaDestination.Optimize,
+    NoctaDestination.Insights,
+    NoctaDestination.Profile
+)
 
 // Routes reachable outside the bottom nav (pushed on top of it).
 object NoctaRoutes {
@@ -32,5 +52,6 @@ object NoctaRoutes {
     const val SLEEP_DETAILS = "sleep_details/{sessionId}"
     const val AI_CONVERSATION = "ai_conversation/{conversationId}"
     const val WIND_DOWN = "wind_down"
+    const val JOURNAL = "journal"
     const val SETTINGS = "settings"
 }

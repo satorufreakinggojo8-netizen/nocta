@@ -9,7 +9,12 @@ import javax.inject.Inject
 data class ScorePoint(val date: LocalDate, val score: Int)
 
 /** One point of the nightly duration chart, in minutes asleep. */
-data class DurationPoint(val date: LocalDate, val minutes: Long)
+data class DurationPoint(
+    val date: LocalDate,
+    val minutes: Long,
+    /** Stored night behind the point, so tapping a bar can open its report. */
+    val sessionId: String
+)
 
 /** Count of nightly scores inside one band. */
 data class ScoreBandCount(val band: String, val count: Int)
@@ -34,7 +39,9 @@ data class TrendSummary(
     val longestStreakNights: Int,
     val scoreDistribution: List<ScoreBandCount>,
     val scoreSeries: List<ScorePoint>,
-    val durationSeries: List<DurationPoint>
+    val durationSeries: List<DurationPoint>,
+    /** Midpoint of the user's age-based range, drawn as the chart's target. */
+    val targetSleepMinutes: Int
 )
 
 /**
@@ -71,7 +78,9 @@ class CalculateSleepTrends @Inject constructor(
             ScorePoint(night.date, calculateSleepScore(window, profile).overall)
         }
 
-        val durationSeries = nightsInWindow.map { DurationPoint(it.date, it.durationMinutes) }
+        val durationSeries = nightsInWindow.map {
+            DurationPoint(it.date, it.durationMinutes, it.id)
+        }
 
         val bedtimeMinutes = nightsInWindow.map { it.bedtime.hour * 60.0 + it.bedtime.minute }
         val avgBedtime = bedtimeMinutes
@@ -111,7 +120,8 @@ class CalculateSleepTrends @Inject constructor(
             longestStreakNights = longestStreak(trackedDates),
             scoreDistribution = distribution,
             scoreSeries = scoreSeries,
-            durationSeries = durationSeries
+            durationSeries = durationSeries,
+            targetSleepMinutes = (profile.recommendedMinMinutes + profile.recommendedMaxMinutes) / 2
         )
     }
 

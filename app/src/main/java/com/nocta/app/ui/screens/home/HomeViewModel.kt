@@ -8,6 +8,8 @@ import com.nocta.app.domain.repository.SettingsRepository
 import com.nocta.app.domain.repository.SleepProfileRepository
 import com.nocta.app.domain.repository.SleepRepository
 import com.nocta.app.domain.usecase.CalculateSleepScore
+import com.nocta.app.domain.usecase.EstimateSleepDebt
+import com.nocta.app.domain.usecase.PickRecommendation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +22,6 @@ data class HomeUiState(
     val isLoading: Boolean = true,
     val lastNight: SleepSession? = null,
     val scoreBreakdown: SleepScoreBreakdown? = null,
-    val sleepDebt: SleepDebt? = null,
     val todaysRecommendation: Recommendation? = null,
     val scoreCardMode: SleepScoreCardMode = SleepScoreCardMode.STANDARD
 )
@@ -30,7 +31,9 @@ class HomeViewModel @Inject constructor(
     private val sleepRepository: SleepRepository,
     private val settingsRepository: SettingsRepository,
     private val sleepProfileRepository: SleepProfileRepository,
-    private val calculateSleepScore: CalculateSleepScore
+    private val calculateSleepScore: CalculateSleepScore,
+    private val estimateSleepDebt: EstimateSleepDebt,
+    private val pickRecommendation: PickRecommendation
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -53,7 +56,6 @@ class HomeViewModel @Inject constructor(
                     isLoading = false,
                     lastNight = lastNight,
                     scoreBreakdown = breakdown,
-                    sleepDebt = estimateSleepDebt(recent),
                     todaysRecommendation = pickRecommendation(lastNight, breakdown),
                     scoreCardMode = _uiState.value.scoreCardMode
                 )
@@ -75,63 +77,5 @@ class HomeViewModel @Inject constructor(
 
     private companion object {
         const val DEFAULT_PROFILE_AGE = 18
-    }
-
-    /** Null when there is no history: "you're well rested" would be a claim the data can't support. */
-    private fun estimateSleepDebt(recent: List<SleepSession>): SleepDebt? {
-        if (recent.isEmpty()) return null
-        val targetMinutes = 8 * 60
-        val avgMinutes = recent.map { it.durationMinutes }.average()
-        val deficitPerNight = (targetMinutes - avgMinutes).coerceAtLeast(0.0)
-        val approxDeficit = (deficitPerNight * recent.size).toInt()
-        val status = when {
-            approxDeficit < 60 -> SleepDebtStatus.WELL_RESTED
-            approxDeficit < 300 -> SleepDebtStatus.SLIGHTLY_BEHIND
-            else -> SleepDebtStatus.CATCHING_UP
-        }
-        return SleepDebt(status, approxDeficit)
-    }
-
-    /**
-     * Minimal, transparent rule-based picker for the scaffold. In production this
-     * call goes to the backend's insight engine (same data, same "no invented
-     * claims" rule) so it can incorporate longer history and AI-generated phrasing —
-     * see docs/01-ARCHITECTURE.md, AI architecture section.
-     */
-    private fun pickRecommendation(
-        lastNight: SleepSession?,
-        breakdown: SleepScoreBreakdown?
-    ): Recommendation? {
-        // No scored history means no personalised advice to give yet.
-        if (breakdown == null || !breakdown.hasData) return null
-        return when {
-            breakdown.consistencyScore < 70 -> Recommendation(
-                id = "rec_consistency",
-                title = "Steady your bedtime",
-                why = "Your bedtime has varied more than usual over the last two weeks.",
-                whatToDo = "Pick one bedtime and hold it for the next 5 nights, weekends included.",
-                difficulty = Difficulty.MODERATE,
-                expectedBenefit = "More consistent sleep timing tends to improve how rested you feel.",
-                category = RecommendationCategory.SCHEDULE
-            )
-            (lastNight?.nightAwakenings ?: 0) >= 2 -> Recommendation(
-                id = "rec_environment",
-                title = "Check your sleep environment",
-                why = "You logged multiple awakenings last night.",
-                whatToDo = "Try a cooler, darker room tonight and see if awakenings drop.",
-                difficulty = Difficulty.EASY,
-                expectedBenefit = "A quieter, darker, cooler room commonly reduces night waking.",
-                category = RecommendationCategory.ENVIRONMENT
-            )
-            else -> Recommendation(
-                id = "rec_screens",
-                title = "Ease off screens before bed",
-                why = "Reducing late-night screen exposure may help you fall asleep more consistently.",
-                whatToDo = "Try keeping your phone away from your bed tonight.",
-                difficulty = Difficulty.EASY,
-                expectedBenefit = "Many people fall asleep faster with less late-night screen light.",
-                category = RecommendationCategory.WIND_DOWN
-            )
-        }
     }
 }

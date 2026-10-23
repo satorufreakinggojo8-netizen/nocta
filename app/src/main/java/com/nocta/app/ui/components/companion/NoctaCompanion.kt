@@ -49,6 +49,9 @@ import kotlin.math.roundToInt
  * the Coach). Dragging never moves the character over the top of the screen,
  * and its resting place is the bottom-trailing edge, matching the reference
  * composition.
+ *
+ * The app shell (`ui/guide/ShadeStage`) renders this overlay on every screen
+ * that has a tip, with the speech bubble anchored above the character's head.
  */
 @Composable
 fun NoctaCompanionOverlay(

@@ -69,7 +69,13 @@ fun JournalScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NoctaBackground),
-        contentPadding = PaddingValues(NoctaSpacing.md),
+        contentPadding = PaddingValues(
+            start = NoctaSpacing.md,
+            end = NoctaSpacing.md,
+            top = NoctaSpacing.md,
+            // Leave the companion stage clear at the bottom.
+            bottom = com.nocta.app.ui.guide.ShadeLayout.CompactBottomInset
+        ),
         verticalArrangement = Arrangement.spacedBy(NoctaSpacing.md)
     ) {
         item {

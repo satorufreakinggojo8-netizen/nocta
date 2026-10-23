@@ -16,17 +16,17 @@ implemented · ⛔ blocked in this environment (no device/emulator).
 
 | Capability | State | Evidence / note |
 |---|---|---|
-| Daily summary (bedtime, wake, duration, source) | ✅ | Home "Last night" rows; source label from `DataSource` |
+| Daily summary (bedtime, wake, duration, source) | ✅ | Home's single "Last night" line → `sleep_details/{id}` with source label from `DataSource` |
 | Nightly report with factor explanations | ✅ | `BuildNightlyReport` + `SleepDetailScreen`; 9 tests |
 | History with selectable nights | ✅ | `SleepCalendarCard` → `sleep_details/{id}` |
 | Calendar distinguishes missing nights | ✅ | `SleepDayQuality.NO_RECORD` rendered as an outlined empty cell |
 | 7/30/90-day trends | ✅ | `CalculateSleepTrends` + Insights segments; 9 tests |
 | Bedtime/wake consistency | ✅ | Circular statistics (`CircularClockStats`) — midnight-safe |
-| Duration trend + qualified sleep debt | ✅ | Debt shown with "estimated" wording, never clinical |
+| Duration trend + qualified sleep debt | ✅ | Chart in Insights (age-range target line, gaps, tappable nights); debt summary → `sleep_debt` page, always worded as an estimate |
 | Milestones / achievable goals | ◐ | Streaks (current/longest) exist; no goal-setting flow |
 | Score calculation explained | ✅ | Five factors with weights surfaced on all score cards |
 | Missing/invalid record handling | ✅ | `hasUsableWindow` filter on every read path + write guard |
-| Accessible chart labels and empty states | ◐ | Trend numbers labelled; charts are drawn with Compose shapes and have no content descriptions |
+| Accessible chart labels and empty states | ✅ | Chart has a spoken night-by-night summary and a custom accessibility action per night; range selector has click labels; empty state offers *Log a night* |
 
 Sleep stages: not claimed anywhere. Phone-only start/stop tracking is labelled
 `Estimated · start/stop tracking`. See `docs/04-TRACKING-ALARMS-AUDIT.md`.
@@ -133,13 +133,28 @@ implementation plan are recorded in `docs/04-TRACKING-ALARMS-AUDIT.md`.
 - Vela assets retained as genuinely transparent WebP; nothing was re-faked.
 - New surfaces have loading/empty/error text; every new control writes to a
   repository (no decorative buttons).
-- ◐ Responsive behaviour beyond the nav bar is unverified — there is no
-  emulator in this environment.
-- ◐ Accessibility is partial: the companion and retry control have
-  descriptions; chart shapes do not.
+- The companion is now a shared stage: a short tip bubble per screen above
+  Vela's head, advancing per screen change, with a persisted mute
+  (`SettingsPersistenceTest`) and an in-app fallback when no coach backend
+  exists. The bubble is a labelled button with a polite live region and a
+  separate 48 dp mute control.
+- `AppShellTest` launches `MainActivity` under Robolectric with the real Hilt
+  graph and a fresh Room database: it asserts the dashboard tip clears both
+  primary actions, tab changes swap the tip without repeating it, muting hides
+  the bubble but not the character, Profile's switch restores it, and Insights
+  opens on its empty state. This is JVM-level automation, not a device run.
+- Long explanations moved to five detail pages, so main tabs keep one line of
+  context each. Charts have spoken summaries and per-night accessibility
+  actions; no second chart repeats the same series.
+- ◐ Responsive behaviour beyond the nav bar and the bubble geometry test
+  (`ShadeStageTest`) is unverified — there is no emulator in this environment.
+- ◐ Accessibility remains partial beyond the above: drag gestures have no
+  non-gesture alternative, and TalkBack order has not been checked on a device.
 
 ## Next best step
 
-Run the app on a phone or emulator and walk the four new surfaces (journal save
-/delete, routine start/pause/finish, preset preview, coach unavailable state).
-The code paths are unit-tested but no pixel has been rendered on a device.
+Run the app on a phone or emulator and walk the new surfaces: the tip bubble on
+each tab (tap with and without a backend), mute then re-enable from Profile, the
+five detail pages, and tapping a bar on the Insights chart. The code paths and
+the bubble's geometry are unit/Robolectric-tested, but no pixel has been
+rendered on a device.

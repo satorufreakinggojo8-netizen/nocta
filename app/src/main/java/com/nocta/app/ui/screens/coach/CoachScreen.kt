@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Icon
@@ -37,6 +38,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,9 +67,23 @@ import com.nocta.app.ui.theme.NoctaTextTertiary
 import com.nocta.app.ui.theme.NoctaTypography
 
 @Composable
-fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
+fun CoachScreen(
+    initialPrompt: String? = null,
+    /** Present when the coach was pushed as a one-off question (no tab bar). */
+    onBack: (() -> Unit)? = null,
+    viewModel: CoachViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+
+    // A question handed over by Shade's tip bubble is asked exactly once.
+    var initialPromptSent by rememberSaveable(initialPrompt) { mutableStateOf(false) }
+    LaunchedEffect(initialPrompt) {
+        if (!initialPrompt.isNullOrBlank() && !initialPromptSent) {
+            initialPromptSent = true
+            viewModel.sendIfAbsent(initialPrompt)
+        }
+    }
 
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
@@ -87,7 +105,7 @@ fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
                 )
             )
     ) {
-        CoachHeader(expression = uiState.expression)
+        CoachHeader(expression = uiState.expression, onBack = onBack)
 
         if (uiState.messages.isEmpty()) {
             Box(
@@ -166,7 +184,10 @@ fun CoachScreen(viewModel: CoachViewModel = hiltViewModel()) {
  * plate — the cutout itself sits on the dark background.
  */
 @Composable
-private fun CoachHeader(expression: CompanionExpression) {
+private fun CoachHeader(
+    expression: CompanionExpression,
+    onBack: (() -> Unit)? = null
+) {
     Column(modifier = Modifier.fillMaxWidth().background(NoctaBackground)) {
         Row(
             modifier = Modifier
@@ -174,6 +195,19 @@ private fun CoachHeader(expression: CompanionExpression) {
                 .padding(horizontal = NoctaSpacing.md, vertical = NoctaSpacing.sm),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            onBack?.let { back ->
+                IconButton(
+                    onClick = back,
+                    modifier = Modifier.padding(end = NoctaSpacing.xs)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = NoctaTextSecondary
+                    )
+                }
+            }
+
             VelaPortrait(height = 62.dp)
 
             Spacer(Modifier.width(NoctaSpacing.sm))

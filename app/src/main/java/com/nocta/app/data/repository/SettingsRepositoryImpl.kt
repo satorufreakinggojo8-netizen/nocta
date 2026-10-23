@@ -38,6 +38,8 @@ class SettingsRepositoryImpl @Inject constructor(
 
     private val windDownMinutesFlow = MutableStateFlow(readWindDownMinutes())
 
+    private val shadeGuideEnabledFlow = MutableStateFlow(readShadeGuideEnabled())
+
     override fun observeSleepScoreCardMode(): Flow<SleepScoreCardMode> =
         sleepScoreCardModeFlow.asStateFlow()
 
@@ -103,6 +105,16 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun getWindDownSteps(): List<WindDownStep> = readWindDownSteps()
 
+    override fun observeShadeGuideEnabled(): Flow<Boolean> =
+        shadeGuideEnabledFlow.asStateFlow()
+
+    override suspend fun setShadeGuideEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHADE_GUIDE_ENABLED, enabled).apply()
+        shadeGuideEnabledFlow.value = enabled
+    }
+
+    override suspend fun getShadeGuideEnabled(): Boolean = shadeGuideEnabledFlow.value
+
     private fun readSleepScoreCardMode(): SleepScoreCardMode {
         val stored = prefs.getString(KEY_SLEEP_SCORE_CARD_MODE, null)
         return SleepScoreCardMode.entries.firstOrNull { it.name == stored }
@@ -120,6 +132,9 @@ class SettingsRepositoryImpl @Inject constructor(
         return SchedulePreset.entries.firstOrNull { it.name == stored }
             ?: SchedulePreset.CUSTOM
     }
+
+    private fun readShadeGuideEnabled(): Boolean =
+        prefs.getBoolean(KEY_SHADE_GUIDE_ENABLED, true)
 
     private fun readWindDownMinutes(): Int {
         val stored = prefs.getInt(KEY_WIND_DOWN_MINUTES, PlannerLimits.DEFAULT_WIND_DOWN_MINUTES)
@@ -157,6 +172,8 @@ class SettingsRepositoryImpl @Inject constructor(
         const val KEY_ACTIVE_PRESET = "active_schedule_preset"
         const val KEY_PRESET_WAKE_PREFIX = "preset_wake_"
         const val KEY_WIND_DOWN_MINUTES = "wind_down_minutes"
+        // Tips start on; muting is remembered across restarts.
+        const val KEY_SHADE_GUIDE_ENABLED = "shade_guide_enabled"
         const val RECORD_SEPARATOR = "\u001e"
         const val FIELD_SEPARATOR = "\u001f"
         val DEFAULT_WAKE_TIME: LocalTime = LocalTime.of(7, 0)

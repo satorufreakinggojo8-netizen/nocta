@@ -132,7 +132,13 @@ private fun ReportContent(report: com.nocta.app.domain.usecase.NightlyReport) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(NoctaSpacing.md),
+        contentPadding = PaddingValues(
+            start = NoctaSpacing.md,
+            end = NoctaSpacing.md,
+            top = NoctaSpacing.md,
+            // Leave the companion stage clear at the bottom.
+            bottom = com.nocta.app.ui.guide.ShadeLayout.CompactBottomInset
+        ),
         verticalArrangement = Arrangement.spacedBy(NoctaSpacing.lg)
     ) {
         item {

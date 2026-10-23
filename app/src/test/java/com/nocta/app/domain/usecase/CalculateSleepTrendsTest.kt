@@ -2,6 +2,7 @@ package com.nocta.app.domain.usecase
 
 import com.nocta.app.domain.model.DataSource
 import com.nocta.app.domain.model.SleepSession
+import com.nocta.app.domain.profile.SleepProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -137,5 +138,24 @@ class CalculateSleepTrendsTest {
         val dup = a.copy(id = "other")
         val summary = useCase(listOf(a, dup), 7, today)
         assertEquals(1, summary.trackedNights)
+    }
+
+    @Test
+    fun `duration points carry the stored night so the chart can open it`() {
+        val night = today.minusDays(1)
+        val summary = useCase(listOf(session(night, 23, 420)), 7, today)
+        assertEquals("s-${night.toEpochDay()}", summary.durationSeries.single().sessionId)
+    }
+
+    @Test
+    fun `the chart target is the midpoint of the age-based range`() {
+        val summary = useCase(
+            listOf(session(today.minusDays(1), 23, 420)),
+            7,
+            today,
+            SleepProfile(age = 30)
+        )
+        // 18–60 targets 7–10 h, so the midpoint is 8 h 30 m.
+        assertEquals(8 * 60 + 30, summary.targetSleepMinutes)
     }
 }

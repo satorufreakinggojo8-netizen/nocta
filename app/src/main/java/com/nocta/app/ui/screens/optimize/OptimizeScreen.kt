@@ -56,6 +56,7 @@ private val DATE_FMT: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM
  */
 @Composable
 fun OptimizeScreen(
+    onOpenPlanWhy: () -> Unit = {},
     viewModel: OptimizeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -64,7 +65,13 @@ fun OptimizeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NoctaBackground),
-        contentPadding = PaddingValues(NoctaSpacing.md),
+        contentPadding = PaddingValues(
+            start = NoctaSpacing.md,
+            end = NoctaSpacing.md,
+            top = NoctaSpacing.md,
+            // Leave the companion stage clear at the bottom.
+            bottom = com.nocta.app.ui.guide.ShadeLayout.CompactBottomInset
+        ),
         verticalArrangement = Arrangement.spacedBy(NoctaSpacing.lg)
     ) {
         item {
@@ -79,12 +86,13 @@ fun OptimizeScreen(
         if (state.isLoading) {
             item { Text("Building tonight's plan…", color = NoctaTextTertiary) }
         } else {
-            state.plan?.let { plan ->
+            state.plan?.let {
                 item {
                     BedtimePlanCard(
                         state = state,
                         onShiftWake = viewModel::shiftWakeTime,
-                        onShiftWindDown = viewModel::shiftWindDown
+                        onShiftWindDown = viewModel::shiftWindDown,
+                        onOpenPlanWhy = onOpenPlanWhy
                     )
                 }
             }
@@ -133,15 +141,6 @@ fun OptimizeScreen(
                 Text(message, style = NoctaTypography.bodyMedium, color = NoctaAccent)
             }
         }
-
-        item {
-            Text(
-                "Plans are guidance from your own records and age-based ranges — " +
-                    "not medical advice. Adjust anything that doesn't fit your life.",
-                style = NoctaTypography.labelSmall,
-                color = NoctaTextTertiary
-            )
-        }
     }
 }
 
@@ -149,7 +148,8 @@ fun OptimizeScreen(
 private fun BedtimePlanCard(
     state: OptimizeUiState,
     onShiftWake: (Int) -> Unit,
-    onShiftWindDown: (Int) -> Unit
+    onShiftWindDown: (Int) -> Unit,
+    onOpenPlanWhy: () -> Unit
 ) {
     val plan = state.plan ?: return
 
@@ -211,18 +211,19 @@ private fun BedtimePlanCard(
             CompactButton("+5", Modifier) { onShiftWindDown(PlannerLimits.STEP_WIND_DOWN_MINUTES) }
         }
 
-        Spacer(Modifier.height(NoctaSpacing.lg))
-
-        Text(
-            "Why this plan",
-            style = NoctaTypography.titleMedium,
-            color = NoctaTextPrimary,
-            fontWeight = FontWeight.Medium
-        )
         Spacer(Modifier.height(NoctaSpacing.sm))
-        plan.explanation.forEach { line ->
-            Text("• $line", style = NoctaTypography.bodyMedium, color = NoctaTextSecondary)
-            Spacer(Modifier.height(4.dp))
+
+        // Full reasoning lives on its own page; the card keeps one honest line.
+        TextButton(
+            onClick = onOpenPlanWhy,
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
+        ) {
+            Text(
+                "Why this plan",
+                style = NoctaTypography.labelSmall,
+                color = NoctaAccent,
+                maxLines = 1
+            )
         }
     }
 }

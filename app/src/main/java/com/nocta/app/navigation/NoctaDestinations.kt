@@ -54,4 +54,19 @@ object NoctaRoutes {
     const val WIND_DOWN = "wind_down"
     const val JOURNAL = "journal"
     const val SETTINGS = "settings"
+
+    // Focused explanation pages. Long-form copy lives here instead of on the
+    // main tabs (see docs/03-SCREENS.md — screen composition rules).
+    const val RECOMMENDATION = "recommendation"
+    const val SLEEP_DEBT = "sleep_debt"
+    const val SCORE_HELP = "score_help"
+    const val PLAN_WHY = "plan_why"
+    const val PRIVACY = "privacy"
+
+    /**
+     * Coach opened from a tip bubble, with the question already attached. Kept
+     * separate from the tab route so the tab's back-stack behaviour and
+     * highlighting stay untouched.
+     */
+    const val COACH_ASK = "coach_ask/{prompt}"
 }

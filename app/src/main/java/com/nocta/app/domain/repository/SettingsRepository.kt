@@ -44,4 +44,12 @@ interface SettingsRepository {
     fun observeWindDownSteps(): Flow<List<WindDownStep>>
     suspend fun setWindDownSteps(steps: List<WindDownStep>)
     suspend fun getWindDownSteps(): List<WindDownStep>
+
+    /**
+     * Whether the companion's contextual tips are shown. Off means the user
+     * muted the guidance; the character itself stays put.
+     */
+    fun observeShadeGuideEnabled(): Flow<Boolean>
+    suspend fun setShadeGuideEnabled(enabled: Boolean)
+    suspend fun getShadeGuideEnabled(): Boolean
 }

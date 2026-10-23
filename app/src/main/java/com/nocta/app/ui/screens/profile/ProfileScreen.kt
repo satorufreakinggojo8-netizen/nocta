@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.nocta.app.ui.components.MetricCard
+import com.nocta.app.ui.theme.NoctaAccent
 import com.nocta.app.ui.theme.NoctaAlert
 import com.nocta.app.ui.theme.NoctaBackground
 import com.nocta.app.ui.theme.NoctaShapes
@@ -52,6 +54,7 @@ import com.nocta.app.ui.theme.NoctaTypography
  */
 @Composable
 fun ProfileScreen(
+    onOpenPrivacy: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -73,7 +76,13 @@ fun ProfileScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NoctaBackground),
-        contentPadding = PaddingValues(NoctaSpacing.md),
+        contentPadding = PaddingValues(
+            start = NoctaSpacing.md,
+            end = NoctaSpacing.md,
+            top = NoctaSpacing.md,
+            // Leave the companion stage clear at the bottom.
+            bottom = com.nocta.app.ui.guide.ShadeLayout.CompactBottomInset
+        ),
         verticalArrangement = Arrangement.spacedBy(NoctaSpacing.lg)
     ) {
         item {
@@ -182,38 +191,82 @@ fun ProfileScreen(
                     .padding(NoctaSpacing.md)
             ) {
                 Text(
+                    "Vela's guidance",
+                    style = NoctaTypography.titleMedium,
+                    color = NoctaTextPrimary,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(Modifier.height(NoctaSpacing.xs))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (state.guideEnabled) {
+                                "Tips are on — one per screen, never repeated back to back."
+                            } else {
+                                "Tips are muted. Vela still appears; the bubble stays hidden."
+                            },
+                            style = NoctaTypography.bodyMedium,
+                            color = NoctaTextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = state.guideEnabled,
+                        onCheckedChange = viewModel::setGuideEnabled
+                    )
+                }
+            }
+        }
+
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(NoctaShapes.medium)
+                    .background(NoctaSurface)
+                    .border(1.dp, NoctaSurfaceBorder, NoctaShapes.medium)
+                    .padding(NoctaSpacing.md)
+            ) {
+                Text(
                     "Privacy & your data",
                     style = NoctaTypography.titleMedium,
                     color = NoctaTextPrimary,
                     fontWeight = FontWeight.Medium
                 )
-                Spacer(Modifier.height(NoctaSpacing.sm))
+                Spacer(Modifier.height(NoctaSpacing.xs))
                 Text(
-                    "Where your data lives:\n" +
-                        "• Sleep records, check-ins, journal entries, routine runs, and coach conversations are stored on this device (Room database).\n" +
-                        "• Display and schedule settings are stored on this device (SharedPreferences).\n" +
-                        "• Sleep sessions are sent to your own backend server only to sync your account, when a backend is configured. The app itself contains no API keys — server credentials stay server-side.\n" +
-                        "• No audio, microphone, or sensor data is collected. Nothing is shared with third parties.",
+                    "Your records stay on this device — they are only sent to a backend you " +
+                        "configure yourself.",
                     style = NoctaTypography.bodyMedium,
                     color = NoctaTextSecondary
                 )
+                TextButton(onClick = onOpenPrivacy) {
+                    Text(
+                        "What is stored, and what leaves the phone",
+                        style = NoctaTypography.labelSmall,
+                        color = NoctaAccent
+                    )
+                }
 
-                Spacer(Modifier.height(NoctaSpacing.md))
+                Spacer(Modifier.height(NoctaSpacing.xs))
 
                 OutlinedButton(
                     onClick = viewModel::exportData,
                     enabled = !state.exporting,
                     modifier = Modifier.fillMaxWidth()
-                ) {                Text(
-                    if (state.exporting) "Preparing export…" else "Export my data (JSON)"
-                )
+                ) {
+                    Text(
+                        if (state.exporting) "Preparing export…" else "Export my data (JSON)"
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     "Includes nights, check-ins, journal entries, routine history, and your schedule settings.",
                     style = NoctaTypography.labelSmall,
                     color = NoctaTextTertiary
                 )
-                }
 
                 Spacer(Modifier.height(NoctaSpacing.sm))
 

@@ -177,7 +177,8 @@ class FakeSettingsRepository(
     var wakeTime: LocalTime = LocalTime.of(7, 0),
     var windDownMinutes: Int = 45,
     var activePreset: SchedulePreset = SchedulePreset.CUSTOM,
-    var steps: List<WindDownStep> = listOf(WindDownStep("dim_lights", "Dim the lights", true))
+    var steps: List<WindDownStep> = listOf(WindDownStep("dim_lights", "Dim the lights", true)),
+    var shadeGuideEnabled: Boolean = true
 ) : SettingsRepository {
     private val presetWakeTimes = mutableMapOf<SchedulePreset, LocalTime>()
 
@@ -224,6 +225,14 @@ class FakeSettingsRepository(
     }
 
     override suspend fun getWindDownSteps(): List<WindDownStep> = steps
+
+    override fun observeShadeGuideEnabled(): Flow<Boolean> = flowOf(shadeGuideEnabled)
+
+    override suspend fun setShadeGuideEnabled(enabled: Boolean) {
+        shadeGuideEnabled = enabled
+    }
+
+    override suspend fun getShadeGuideEnabled(): Boolean = shadeGuideEnabled
 }
 
 class FakeAiCoachRepository : AiCoachRepository {

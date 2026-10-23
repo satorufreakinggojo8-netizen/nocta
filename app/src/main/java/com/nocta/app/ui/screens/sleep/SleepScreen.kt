@@ -94,6 +94,7 @@ fun SleepScreen(
     onOpenSleepDetails: (String) -> Unit = {},
     onLogSleep: () -> Unit = {},
     onOpenJournal: () -> Unit = {},
+    onOpenScoreHelp: () -> Unit = {},
     viewModel: SleepViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -102,7 +103,13 @@ fun SleepScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(NoctaBackground),
-        contentPadding = PaddingValues(NoctaSpacing.md),
+        contentPadding = PaddingValues(
+            start = NoctaSpacing.md,
+            end = NoctaSpacing.md,
+            top = NoctaSpacing.md,
+            // Leave the companion stage clear at the bottom.
+            bottom = com.nocta.app.ui.guide.ShadeLayout.CompactBottomInset
+        ),
         verticalArrangement = Arrangement.spacedBy(NoctaSpacing.lg)
     ) {
         item {
@@ -151,7 +158,7 @@ fun SleepScreen(
         item {
             val score = state.sleepScore
             if (score != null && score.hasData) {
-                SleepScoreSection(score)
+                SleepScoreSection(score, onOpenScoreHelp = onOpenScoreHelp)
             } else if (!state.isLoading) {
                 SleepScoreEmptyCard(onLogSleep = onLogSleep)
             }
@@ -605,7 +612,8 @@ private fun CheckInQuestion(
 
 @Composable
 private fun SleepScoreSection(
-    score: SleepScoreBreakdown
+    score: SleepScoreBreakdown,
+    onOpenScoreHelp: () -> Unit
 ) {
     Column {
         Text(
@@ -672,12 +680,16 @@ private fun SleepScoreSection(
             )
         }
 
-        Spacer(Modifier.height(NoctaSpacing.sm))
+        Spacer(Modifier.height(NoctaSpacing.xs))
 
-        Text(
-            "This is a wellness score based on your tracked sleep and check-in responses. It isn't a medical assessment.",
-            style = NoctaTypography.bodySmall,
-            color = NoctaTextTertiary
-        )
+        // The long explanation (weights, caveats) lives on its own page.
+        TextButton(onClick = onOpenScoreHelp) {
+            Text(
+                "How this is calculated",
+                style = NoctaTypography.labelSmall,
+                color = NoctaAccent,
+                maxLines = 1
+            )
+        }
     }
 }

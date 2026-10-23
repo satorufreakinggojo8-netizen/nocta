@@ -207,6 +207,20 @@ class CoachViewModel @Inject constructor(
         send(promptOverride = lastText)
     }
 
+    /**
+     * Sends a question that arrived from outside the chat (a tip bubble). An
+     * identical question already in the conversation is not asked twice, so a
+     * re-entered screen cannot duplicate the exchange.
+     */
+    fun sendIfAbsent(prompt: String) {
+        if (prompt.isBlank() || _uiState.value.isSending) return
+        val alreadyAsked = _uiState.value.messages.any { message ->
+            message.role == MessageRole.USER && message.content == prompt
+        }
+        if (alreadyAsked) return
+        send(promptOverride = prompt)
+    }
+
     fun send(promptOverride: String? = null) {
         val text = promptOverride ?: _uiState.value.inputText
         if (text.isBlank() || _uiState.value.isSending) return

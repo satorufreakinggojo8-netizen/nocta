@@ -24,6 +24,8 @@ data class ProfileUiState(
     val sleepTargetLabel: String? = null,
     val wakeTime: LocalTime = LocalTime.of(7, 0),
     val cardMode: SleepScoreCardMode = SleepScoreCardMode.STANDARD,
+    /** Shade's contextual tips, remembered across restarts. */
+    val guideEnabled: Boolean = true,
     val savedMessage: String? = null,
     val exportText: String? = null,
     val exporting: Boolean = false,
@@ -70,6 +72,11 @@ class ProfileViewModel @Inject constructor(
                 _uiState.update { it.copy(cardMode = mode) }
             }
         }
+        viewModelScope.launch {
+            settingsRepository.observeShadeGuideEnabled().collect { enabled ->
+                _uiState.update { it.copy(guideEnabled = enabled) }
+            }
+        }
     }
 
     fun saveAge(age: Int) {
@@ -98,6 +105,23 @@ class ProfileViewModel @Inject constructor(
 
     fun setCardMode(mode: SleepScoreCardMode) {
         viewModelScope.launch { settingsRepository.setSleepScoreCardMode(mode) }
+    }
+
+    /** Turning tips back on is the same switch that muted them. */
+    fun setGuideEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setShadeGuideEnabled(enabled)
+            _uiState.update {
+                it.copy(
+                    guideEnabled = enabled,
+                    savedMessage = if (enabled) {
+                        "Vela's tips are back on."
+                    } else {
+                        "Vela's tips are muted. The character stays, the bubble is hidden."
+                    }
+                )
+            }
+        }
     }
 
     fun clearMessage() {
